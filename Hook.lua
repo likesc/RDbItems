@@ -414,18 +414,6 @@ function RDbFrameOnLoaded(self)
 		--	DEFAULT_CHAT_FRAME:AddMessage(tostring(k) .. " - " ..tostring(v));
 		--end
 	end
-
-	if LANG == 2 then -- macro font size
-	local ORG_ShowMacroFrame = ShowMacroFrame;
-		ShowMacroFrame = function()
-			ORG_ShowMacroFrame()
-			if MacroFrameText then
-				MacroFrameText:SetFont(MacroFrameText:GetFont(), 12);
-			end
-			ShowMacroFrame = ORG_ShowMacroFrame;
-			ORG_ShowMacroFrame = nil;
-		end
-	end
 end
 --[[
 用于将物品以指定的文字描述发送到聊天窗口,
