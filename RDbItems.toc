@@ -1,0 +1,6 @@
+## Interface: 11200
+## Title: |cFF7A43B6RDbItems|r(中英文物品名显示)
+## OptionalDeps: RDbItemsEnchant
+## SavedVariables: RDbItemsCC
+
+RDbItems.xml

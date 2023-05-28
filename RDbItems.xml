@@ -1,0 +1,51 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
+..\FrameXML\UI.xsd">
+	<Script file="RDbItems.lua"/>
+	<Script file="Hook.lua"/>
+	<Button name="RDbFrame" parent="UIParent" hidden="false" text="@">
+		<Size><AbsDimension x="24" y="24"/></Size>
+		<Anchors><Anchor point="BOTTOM" relativeTo="ChatFrameMenuButton" relativePoint="TOP" /></Anchors>
+		<Layers>
+			<Layer level="BACKGROUND">
+				<Texture name="$parentTop" file="Interface\ToolTips\UI-Tooltip-Border">
+					<Size>
+						<AbsDimension x="32" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="TOP"/>
+					</Anchors>
+					<TexCoords left="0.5" right="0.75" top="0" bottom="1"/>
+				</Texture>
+				<Texture name="$parentBottom" file="Interface\ToolTips\UI-Tooltip-Border">
+					<Size>
+						<AbsDimension x="32" y="16"/>
+					</Size>
+					<Anchors>
+						<Anchor point="BOTTOM"/>
+					</Anchors>
+					<TexCoords left="0.75" right="1" top="0" bottom="1"/>
+				</Texture>
+			</Layer>
+		</Layers>
+		<NormalText name="$parentText" inherits="GameFontNormal"/>
+		<DisabledText inherits="GameFontDisable"/>
+		<HighlightText inherits="GameFontHighlight"/>
+		<HighlightTexture inherits="UIPanelButtonHighlightTexture"/>	
+		<Scripts>
+			<OnLoad>
+				RDbFrameOnLoaded();
+			</OnLoad>
+			<OnEvent>
+				if event == "ADDON_LOADED" and arg1 == "RDbItems" then
+					DEFAULT_CHAT_FRAME:AddMessage("|cFF7A43B6" .. arg1 .. "|r has loaded");
+				elseif event == "VARIABLES_LOADED" then
+					if not RDbItemsCC then RDbItemsCC = "auto" end -- ## SavedVariables
+					if RDbItemsCC ~= "auto" then RDbFrame:ShowMod() end
+				end
+			</OnEvent>
+			<OnClick>
+				RDbFrame:ToggleMod();
+			</OnClick>
+		</Scripts>
+	</Button>
+</Ui>
