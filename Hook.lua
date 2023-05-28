@@ -124,7 +124,7 @@ end
 
 local Bliz_SetHyperlink = GameTooltip.SetHyperlink;
 GameTooltip.SetHyperlink = function(self, link)
-	Bliz_SetHyperlink(self, link);	
+	Bliz_SetHyperlink(self, link);
 	local _, _, linkType, itemIdStr = string.find(link, "(%l+):(%d+)");
 	if linkType == "item" then
 		Add2Tooltip(self, tonumber(itemIdStr));
@@ -301,7 +301,7 @@ local Bliz_GetInventoryItemLink = GetInventoryItemLink;
 local function Trans_GetInventoryItemLink(unit, slot) return LinkTrans(Bliz_GetInventoryItemLink(unit, slot)) end;
 
 
---[[ -- EQL3 的更好..任务加上任务等级, copy from FrameXML/QuestLogFrame.lua 
+--[[ -- EQL3 的更好..任务加上任务等级, copy from FrameXML/QuestLogFrame.lua
 local Bliz_QuestLogTitleButton_OnClick = QuestLogTitleButton_OnClick;
 QuestLogTitleButton_OnClick = function(button)
 	if ChatFrameEditBox:IsVisible() and IsShiftKeyDown() then
@@ -314,7 +314,7 @@ end
 --]]
 
 local function TransHook(mode)
-	if mode == "auto" then
+	if not mode then
 		GetTradeSkillReagentItemLink,GetTradeSkillItemLink = Bliz_GetTradeSkillReagentItemLink,Bliz_GetTradeSkillItemLink;
 		if RDbItemsEnchant then GetCraftItemLink = Bliz_GetCraftItemLink end;
 		GetCraftReagentItemLink = Bliz_GetCraftReagentItemLink;
@@ -333,37 +333,41 @@ local function TransHook(mode)
 	end
 end
 
+ --
 
-function RDbFrameOnLoaded()
-
-	function RDbFrame:ToggleMod()
-		if RDbItemsCC == "en" then
-			RDbItemsCC = "cn";
-		elseif RDbItemsCC == "cn" then
-			RDbItemsCC = "auto";
-		else
-			RDbItemsCC = "en";
-		end
-		self:ShowMod();
+local function ModeUpdate(self)
+	local mode = RDbItemsCC -- ## SavedVariables
+	TransHook(mode)
+	if mode == "en" then
+		self:SetText("E")
+	elseif mode == "cn" then
+		self:SetText("中")
+	else
+		self:SetText("--")
 	end
-				
-	function RDbFrame:ShowMod()
-		local mod = RDbItemsCC;
-		if mod == "en" then
-			TransHook("en");
-			self:SetText("E");
-		elseif mod == "cn" then
-			TransHook("cn");
-			self:SetText("中");
-		else
-			TransHook("auto");
-			self:SetText("@");
-		end
+end
+
+local function ModeToggle(self)
+	if RDbItemsCC == "en" then
+		RDbItemsCC = "cn"
+	elseif RDbItemsCC == "cn" then
+		RDbItemsCC = nil
+	else
+		RDbItemsCC = "en"
 	end
+	ModeUpdate(self)
+end
 
-	RDbFrame:RegisterEvent("ADDON_LOADED");
-	RDbFrame:RegisterEvent("VARIABLES_LOADED");
-
+function RDbFrameOnLoaded(self)
+	self.ModeToggle = ModeToggle
+	self:RegisterEvent("VARIABLES_LOADED");
+	self:SetScript("OnEvent", function()
+		local evt = event
+		if evt == "VARIABLES_LOADED" then
+			ModeUpdate(self)
+		end
+	end)
+	DEFAULT_CHAT_FRAME:AddMessage(self:GetName() .. " loaded")
 	-- Copy From FrameXML/ContainerFrame.lua,
 	ContainerFrameItemButton_OnEnter = function()
 		if not this.hasItem then return end
@@ -410,7 +414,7 @@ function RDbFrameOnLoaded()
 		--	DEFAULT_CHAT_FRAME:AddMessage(tostring(k) .. " - " ..tostring(v));
 		--end
 	end
-	
+
 	if LANG == 2 then -- macro font size
 	local ORG_ShowMacroFrame = ShowMacroFrame;
 		ShowMacroFrame = function()
@@ -424,14 +428,14 @@ function RDbFrameOnLoaded()
 	end
 end
 --[[
-用于将物品以指定的文字描述发送到聊天窗口, 
+用于将物品以指定的文字描述发送到聊天窗口,
  - @(auto): 直接使用当前客户端语言, 即不进行处理
  - E(英): 当往聊天窗口输物品链接时,使用英文名称
  - 中(中文): 当往聊天窗口输物品链接时,使用中文名称
- 
-特性: 
+
+特性:
  - 支持 shift + 点击 输出到拍卖行, 这将会强制以英文输出, 目前支持 "背包","专业","聊天窗口中链接"
 
-更新: 
+更新:
  - 移除旧的slash模式, 通过点击聊天窗口的 `@` 按钮切换模式
 --]]

@@ -33,18 +33,10 @@
 		<HighlightTexture inherits="UIPanelButtonHighlightTexture"/>	
 		<Scripts>
 			<OnLoad>
-				RDbFrameOnLoaded();
+				RDbFrameOnLoaded(this);
 			</OnLoad>
-			<OnEvent>
-				if event == "ADDON_LOADED" and arg1 == "RDbItems" then
-					DEFAULT_CHAT_FRAME:AddMessage("|cFF7A43B6" .. arg1 .. "|r has loaded");
-				elseif event == "VARIABLES_LOADED" then
-					if not RDbItemsCC then RDbItemsCC = "auto" end -- ## SavedVariables
-					if RDbItemsCC ~= "auto" then RDbFrame:ShowMod() end
-				end
-			</OnEvent>
 			<OnClick>
-				RDbFrame:ToggleMod();
+				this:ModeToggle();
 			</OnClick>
 		</Scripts>
 	</Button>
