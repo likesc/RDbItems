@@ -1,12 +1,6 @@
 local LANG = GetLocale() ~= "enUS" and 1 or 2;
-
-local function AName(id)
-  return '|cffaaaaaa' .. RDbItems[id][LANG] .. '|r';
-end
-
-local function IdALvl(id)
-	return "|cffaaaaaaLv ".. RDbItems[id][3] .. "|r","|cffaaaaaaID ".. id .. "|r";
-end
+local IDX_PRICE = 4
+local IDX_LV = 3
 
 -- item:6948:0:0:0
 local function LinkToID(link)
@@ -21,13 +15,21 @@ local function LinkToItemName(link)
 	return name;
 end
 
-local function Add2Tooltip(tooltip, itemId)
-	if RDbItems[itemId] then
-		tooltip:AddLine(AName(itemId));
-		if RDbItems[itemId][4] > 0 then SetTooltipMoney(tooltip, RDbItems[itemId][4]) end;
-		tooltip:AddDoubleLine(IdALvl(itemId))
-		tooltip:Show();
+local function AppendItemInfo(tooltip, itemId, skipPrice)
+	local itemInfos = RDbItems[itemId]
+	if not itemInfos then
+		return
 	end
+	local lv = itemInfos[IDX_LV]
+	if lv > 1 then
+		tooltip:AddDoubleLine(itemInfos[LANG], "|cff999999Lv|r|cffffffff".. lv .. "|r");
+	else
+		tooltip:AddLine(itemInfos[LANG])
+	end
+	if not skipPrice and itemInfos[IDX_PRICE] > 0 then
+		SetTooltipMoney(tooltip, itemInfos[IDX_PRICE])
+	end
+	tooltip:Show()
 end
 
 local function LinkTrans(link, c)
@@ -52,10 +54,9 @@ end
 
 local Bliz_GameTooltip_SetInventoryItem = GameTooltip.SetInventoryItem;
 GameTooltip.SetInventoryItem = function(self, unit, slot)
-	-- DEFAULT_CHAT_FRAME:AddMessage(tostring(unit))
-	local hasItem,hasCooldown, repairCost = Bliz_GameTooltip_SetInventoryItem(self, unit, slot);
+	local hasItem, hasCooldown, repairCost = Bliz_GameTooltip_SetInventoryItem(self, unit, slot);
 	if hasItem then
-		Add2Tooltip(self, LinkToID(GetInventoryItemLink(unit, slot)));
+		AppendItemInfo(self, LinkToID(GetInventoryItemLink(unit, slot)))
 	end
 	return hasItem,hasCooldown, repairCost;
 end
@@ -119,7 +120,7 @@ end
 local Bliz_GameTooltip_SetLootItem = GameTooltip.SetLootItem;
 GameTooltip.SetLootItem = function(self, slot)
 	Bliz_GameTooltip_SetLootItem(self, slot);
-	Add2Tooltip(self, LinkToID(GetLootSlotLink(slot)));
+	AppendItemInfo(self, LinkToID(GetLootSlotLink(slot)));
 end
 
 local Bliz_SetHyperlink = GameTooltip.SetHyperlink;
@@ -127,7 +128,7 @@ GameTooltip.SetHyperlink = function(self, link)
 	Bliz_SetHyperlink(self, link);
 	local _, _, linkType, itemIdStr = string.find(link, "(%l+):(%d+)");
 	if linkType == "item" then
-		Add2Tooltip(self, tonumber(itemIdStr));
+		AppendItemInfo(self, tonumber(itemIdStr));
 	end
 end
 
@@ -136,7 +137,7 @@ GameTooltip.SetLootRollItem = function(self, rollID)
 	Bliz_GameTooltip_SetLootRollItem(self, rollID);
 	local _, _, linkType, itemIdStr = string.find(GetLootRollItemLink(rollID), "(%l+):(%d+)");
 	if linkType == "item" then
-		Add2Tooltip(self, tonumber(itemIdStr));
+		AppendItemInfo(self, tonumber(itemIdStr));
 	end
 end
 
@@ -175,7 +176,7 @@ SetItemRef = function(item, link, button)
 			BrowseName:SetText(RDbItems[itemId][1]);
 		end -- 1.121 附魔不可以附在纸上, 因此不考虑拍卖行中的附魔相关
 	elseif itemType == "item" then
-		Add2Tooltip(ItemRefTooltip, itemId); -- 实际对 link 的更改并不会影响 Tooltip 的显示
+		AppendItemInfo(ItemRefTooltip, itemId); -- 实际对 link 的更改并不会影响 Tooltip 的显示
 	elseif itemType == "enchant" then
 		ItemRefTooltip:AddLine('|cffaaaaaa' .. RDbItemsEnchant[itemId][LANG] .. '|r');
 		ItemRefTooltip:Show();
@@ -185,20 +186,20 @@ end
 local Bliz_GameTooltip_SetAuctionItem = GameTooltip.SetAuctionItem;
 GameTooltip.SetAuctionItem = function(self, type, index)
 	Bliz_GameTooltip_SetAuctionItem(self, type, index);
-	Add2Tooltip(self, LinkToID(GetAuctionItemLink(type, index)));
+	AppendItemInfo(self, LinkToID(GetAuctionItemLink(type, index)));
 end
 
 -- 任务
 local Bliz_GameTooltip_SetQuestItem = GameTooltip.SetQuestItem;
 GameTooltip.SetQuestItem = function(self, itemType, index)
 	Bliz_GameTooltip_SetQuestItem(self, itemType, index);
-	Add2Tooltip(self, LinkToID(GetQuestItemLink(itemType,index)));
+	AppendItemInfo(self, LinkToID(GetQuestItemLink(itemType,index)));
 end
 local Bliz_GameTooltip_SetQuestLogItem = GameTooltip.SetQuestLogItem;
 GameTooltip.SetQuestLogItem = function(self, itemType, index)
 	if itemType then
 		Bliz_GameTooltip_SetQuestLogItem(self, itemType, index);
-		Add2Tooltip(self, LinkToID(GetQuestLogItemLink(itemType,index)));
+		AppendItemInfo(self, LinkToID(GetQuestLogItemLink(itemType,index)));
 	end
 end
 
@@ -209,12 +210,7 @@ GameTooltip.SetTradeSkillItem = function(self, index, id)
 	local _, _,linkType, itemIdStr = string.find(id and GetTradeSkillReagentItemLink(index, id) or GetTradeSkillItemLink(index), "(%l+):(%d+)");
 	local itemId = tonumber(itemIdStr);
 	if linkType == "item" and RDbItems[itemId] then
-		self:AddLine(AName(itemId));
-		if not id then -- 有ID表示商业制造的物品所需求的物品
-			if RDbItems[itemId][4] > 0 then SetTooltipMoney(self, RDbItems[itemId][4]) end;
-			self:AddDoubleLine(IdALvl(itemId))
-		end
-		self:Show();
+		AppendItemInfo(self, itemId, id) -- 有ID表示商业制造的物品所需求的物品
 	end
 end
 
@@ -226,10 +222,7 @@ local Bliz_GameTooltip_SetCraftItem = GameTooltip.SetCraftItem;
 GameTooltip.SetCraftItem = function(self, index, id)
 	Bliz_GameTooltip_SetCraftItem(self, index, id);
 	local itemId = LinkToID(GetCraftReagentItemLink(index, id))
-	if RDbItems[itemId] then
-		self:AddLine(AName(itemId));
-		self:Show();
-	end
+	AppendItemInfo(self, itemId, true)
 end
 
 -- 附魔,依赖于 RDbItemsEnchant
@@ -272,10 +265,7 @@ local Bliz_GameTooltip_SetMerchantItem = GameTooltip.SetMerchantItem;
 GameTooltip.SetMerchantItem = function(self, index)
 	Bliz_GameTooltip_SetMerchantItem(self, index);
 	local itemId = LinkToID(GetMerchantItemLink(index));
-	if RDbItems[itemId] then
-		self:AddLine(AName(itemId));
-		self:Show();
-	end
+	AppendItemInfo(self, itemId, true)
 end
 
 -- 点击商业技能时
@@ -402,17 +392,8 @@ function RDbFrameOnLoaded(self)
 				SetTooltipMoney(GameTooltip, repairCost);
 			end
 		end
-
-		local itemId = LinkToID(GetContainerItemLink(bag, slot));
-		if RDbItems[itemId] then
-			GameTooltip:AddLine(AName(itemId));
-			if not MerchantFrame:IsVisible() and RDbItems[itemId][4] > 0 then SetTooltipMoney(GameTooltip, RDbItems[itemId][4] * this.count) end;
-			GameTooltip:AddDoubleLine(IdALvl(itemId));
-		end
-		GameTooltip:Show();
-		--for k,v in pairs(this) do
-		--	DEFAULT_CHAT_FRAME:AddMessage(tostring(k) .. " - " ..tostring(v));
-		--end
+		local itemId = LinkToID(GetContainerItemLink(bag, slot))
+		AppendItemInfo(GameTooltip, itemId, MerchantFrame:IsVisible())
 	end
 end
 --[[
