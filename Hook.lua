@@ -1,333 +1,269 @@
-local LANG = GetLocale() ~= "enUS" and 1 or 2;
-local IDX_PRICE = 4
+-- [25] = {"Worn Shortsword", "破损的短剑", 2, 7},
+local IDX_enUS = 1
+local IDX_zhCN = 2
 local IDX_LV = 3
+local IDX_PRICE = 4
+
+-- Opposite language
+local OPLANG = GetLocale() == "zhCN" and IDX_enUS or IDX_zhCN
+
+local function trace(s)
+	DEFAULT_CHAT_FRAME:AddMessage(tostring(s))
+end
 
 -- item:6948:0:0:0
 local function LinkToID(link)
-	if link then
-		local _, _, id = string.find(link, ":(%d+)");
-		return tonumber(id);
+	local _, _, id = string.find(link, ":(%d+):")
+	return tonumber(id)
+end
+
+local function LinkToName(link)
+	local _, _, name = string.find(link,"%[([^%]]+)%]")
+	return name
+end
+
+local function LinkLocale(link, cc)
+	local idx = IDX_zhCN
+	if cc == "en" then
+		idx = IDX_enUS
 	end
+	if not cc or not link then 
+		return link 
+	end
+	local itemId = LinkToID(link)
+	local itemInfo = RDbItems[itemId]
+	if itemInfo then
+		link = gsub(link, "%[([^%]]+)%]", "[".. itemInfo[idx] .."]")
+	end
+	return link
 end
 
-local function LinkToItemName(link)
-	local _,_, name = string.find(link,"%[([^%]]+)%]");
-	return name;
+local function LinkOppoSite(link, cc)
+	if not cc then cc = RDbItemsCC end
+	if OPLANG == IDX_zhCN then -- enUS client
+		if cc == "cn" then
+			link = LinkLocale(link, cc)
+		end
+	else
+		if cc == "en" then
+			link = LinkLocale(link, cc)
+		end
+	end
+	return link
 end
 
-local function AppendItemInfo(tooltip, itemId, skipPrice)
-	local itemInfos = RDbItems[itemId]
-	if not itemInfos then
+local function AddLocales(tooltip, itemId, count)
+	local itemInfo = RDbItems[itemId]
+	if not itemInfo then
 		return
 	end
-	local lv = itemInfos[IDX_LV]
+	local lv = itemInfo[IDX_LV]
 	if lv > 1 then
-		tooltip:AddDoubleLine(itemInfos[LANG], "|cff999999Lv|r|cffffffff".. lv .. "|r");
+		tooltip:AddDoubleLine(itemInfo[OPLANG], "|cff999999Lv|r|cffffffff".. lv .. "|r")
 	else
-		tooltip:AddLine(itemInfos[LANG])
+		tooltip:AddLine(itemInfo[OPLANG])
 	end
-	if not skipPrice and itemInfos[IDX_PRICE] > 0 then
-		SetTooltipMoney(tooltip, itemInfos[IDX_PRICE])
+	if not count then count = 1 end
+	if count > 0 and itemInfo[IDX_PRICE] > 0 then
+		SetTooltipMoney(tooltip, itemInfo[IDX_PRICE] * count)
 	end
 	tooltip:Show()
 end
 
-local function LinkTrans(link, c)
-	if not c then c = RDbItemsCC end;
-	if LANG == 1 then -- 中文客户端
-		if c == "en" then
-			local itemId = LinkToID(link);
-			if RDbItems[itemId] then
-				link = gsub(link, "%[([^%]]+)%]", "[".. RDbItems[itemId][1] .."]")
-			end
+local function HookGameTooltip()
+	-- copies from ShaguTweak/mods/verdor-value.lua
+	local hookFrame = CreateFrame("Frame", nil, GameTooltip)
+	hookFrame:SetScript("OnHide", function()
+		hookFrame.itemLink = nil
+		hookFrame.itemCount = nil
+	end)
+	hookFrame:SetScript("OnShow", function()
+		if not GameTooltip.itemLink then
+			return
 		end
-	else
-		if c == "cn" then
-			local itemId = LinkToID(link);
-			if RDbItems[itemId] then
-				link = gsub(link, "%[([^%]]+)%]", "[".. RDbItems[itemId][2] .."]")
-			end
+		local itemId = LinkToID(GameTooltip.itemLink)
+		local count = GameTooltip.itemCount or 1
+		AddLocales(GameTooltip, itemId, count)
+	end)
+	-- SetItemRef, Called to handle clicks on Blizzard hyperlinks in chat
+	local HookSetItemRef = SetItemRef
+	SetItemRef = function(link, text, button)
+		local item, _, id = string.find(text, "item:(%d+):.*")
+		if item and IsShiftKeyDown() and ChatFrameEditBox:IsVisible() and RDbItemsCC then
+			text = LinkLocale(text, RDbItemsCC)
+		end
+		HookSetItemRef(link, text, button)
+		if item and not IsAltKeyDown() and not IsShiftKeyDown() and not IsControlKeyDown() then
+			AddLocales(ItemRefTooltip, tonumber(id))
 		end
 	end
-	return link;
-end
-
-local Bliz_GameTooltip_SetInventoryItem = GameTooltip.SetInventoryItem;
-GameTooltip.SetInventoryItem = function(self, unit, slot)
-	local hasItem, hasCooldown, repairCost = Bliz_GameTooltip_SetInventoryItem(self, unit, slot);
-	if hasItem then
-		AppendItemInfo(self, LinkToID(GetInventoryItemLink(unit, slot)))
-	end
-	return hasItem,hasCooldown, repairCost;
-end
-
-local Bliz_PaperDollItemSlotButton_OnEnter = PaperDollItemSlotButton_OnEnter;
-function PaperDollItemSlotButton_OnEnter()
-	if GameTooltip:IsVisible() then return end;
-	Bliz_PaperDollItemSlotButton_OnEnter(this);
-end
-
--- 背包物品
-local Bliz_GetContainerItemLink = GetContainerItemLink;
-local function Trans_GetContainerItemLink(bag, slot) return LinkTrans(Bliz_GetContainerItemLink(bag, slot)) end;
-
--- overwrite FrameXML/ContainerFrame.lua
-local Bliz_ContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick;
-ContainerFrameItemButton_OnClick = function(button, ignoreShift)
-	if not IsControlKeyDown() and IsShiftKeyDown() and not ignoreShift and not ChatFrameEditBox:IsVisible() and BrowseName ~= nil and BrowseName:IsVisible() then
-		local link = Bliz_GetContainerItemLink(this:GetParent():GetID(), this:GetID());
-		if LANG == 1 then	-- 非英文, 未测试
-			local itemId = LinkToID( link )
-			if RDbItems[itemId] then
-				BrowseName:SetText( RDbItems[itemId][1] )
-			else
-				BrowseName:SetText( LinkToItemName(link) ); -- 即使是中文客户端, 有些物品也是英文的
-				DEFAULT_CHAT_FRAME:AddMessage( "目前暂时没有收录,请自行搜索..." );
-				PlaySound("TellMessage");
-			end
+	-- .SetBagItem
+	local HookSetBagItem = GameTooltip.SetBagItem
+	function GameTooltip.SetBagItem(self, container, slot)
+		self.itemLink = GetContainerItemLink(container, slot)
+		if MerchantFrame:IsVisible() then
+			self.itemCount = 0
 		else
-			BrowseName:SetText( LinkToItemName(link) );
+			_, self.itemCount = GetContainerItemInfo(container, slot)
 		end
-	else
-		Bliz_ContainerFrameItemButton_OnClick(button, ignoreShift);
+		return HookSetBagItem(self, container, slot)
 	end
-end
-
-local Bliz_KeyRingItemButton_OnClick = KeyRingItemButton_OnClick;
-KeyRingItemButton_OnClick = function(button)
-	if not IsControlKeyDown() then
-		if button == "LeftButton" and IsShiftKeyDown() then
-			if ChatFrameEditBox:IsVisible() then
-				local link = GetContainerItemLink(this:GetParent():GetID(), this:GetID());
-				ChatFrameEditBox:Insert(LinkTrans(link));
-			end
+	-- .SetQuestLogItem
+	local HookSetQuestLogItem = GameTooltip.SetQuestLogItem
+	function GameTooltip.SetQuestLogItem(self, itemType, index)
+		self.itemLink = GetQuestLogItemLink(itemType, index)
+		if not self.itemLink then return end
+		return HookSetQuestLogItem(self, itemType, index)
+	end
+	-- .SetQuestItem
+	local HookSetQuestItem = GameTooltip.SetQuestItem
+	function GameTooltip.SetQuestItem(self, itemType, index)
+		self.itemLink = GetQuestItemLink(itemType, index)
+		return HookSetQuestItem(self, itemType, index)
+	end
+	-- .SetLootItem
+	local HookSetLootItem = GameTooltip.SetLootItem
+	function GameTooltip.SetLootItem(self, slot)
+		self.itemLink = GetLootSlotLink(slot)
+		HookSetLootItem(self, slot)
+	end
+	-- .SetInboxItem
+	local HookSetInboxItem = GameTooltip.SetInboxItem
+	function GameTooltip.SetInboxItem(self, mailID, attachmentIndex)
+		_, _, self.itemCount = GetInboxItem(mailID)
+		self.itemLink = GetInboxItemLink(mailID, attachmentIndex)
+		return HookSetInboxItem(self, mailID, attachmentIndex)
+	end
+	-- .SetInventoryItem
+	local HookSetInventoryItem = GameTooltip.SetInventoryItem
+	function GameTooltip.SetInventoryItem(self, unit, slot)
+		self.itemLink = GetInventoryItemLink(unit, slot)
+		return HookSetInventoryItem(self, unit, slot)
+	end
+	-- .SetLootRollItem
+	local HookSetLootRollItem = GameTooltip.SetLootRollItem
+	function GameTooltip.SetLootRollItem(self, id)
+		self.itemLink = GetLootRollItemLink(id)
+		return HookSetLootRollItem(self, id)
+	end
+	-- .SetMerchantItem
+	local HookSetMerchantItem = GameTooltip.SetMerchantItem
+	function GameTooltip.SetMerchantItem(self, merchantIndex)
+		self.itemLink = GetMerchantItemLink(merchantIndex)
+		self.itemCount = 0 -- 0 means don't show addon price
+		return HookSetMerchantItem(self, merchantIndex)
+	end
+	-- .SetBuybackItem
+	local HookSetBuybackItem = GameTooltip.SetBuybackItem
+	function GameTooltip.SetBuybackItem(self, merchantIndex)
+		self.itemLink = GetMerchantItemLink(merchantIndex)
+		self.itemCount = 0 -- 0 means don't show addon price
+		return HookSetBuybackItem(self, merchantIndex)
+	end
+	-- .SetCraftItem
+	local HookSetCraftItem = GameTooltip.SetCraftItem
+	function GameTooltip.SetCraftItem(self, skill, slot)
+		self.itemLink = GetCraftReagentItemLink(skill, slot)
+		return HookSetCraftItem(self, skill, slot)
+	end
+	-- .SetCraftSpell
+	local HookSetCraftSpell = GameTooltip.SetCraftSpell
+	function GameTooltip.SetCraftSpell(self, slot)
+		self.itemLink = GetCraftItemLink(slot)
+		return HookSetCraftSpell(self, slot)
+	end
+	-- .SetTradeSkillItem
+	local HookSetTradeSkillItem = GameTooltip.SetTradeSkillItem
+	function GameTooltip.SetTradeSkillItem(self, skillIndex, reagentIndex)
+		if reagentIndex then
+			self.itemLink = GetTradeSkillReagentItemLink(skillIndex, reagentIndex)
 		else
-			Bliz_KeyRingItemButton_OnClick(button);
+			self.itemLink = GetTradeSkillItemLink(skillIndex)
 		end
+		return HookSetTradeSkillItem(self, skillIndex, reagentIndex)
+	end
+	-- .SetAuctionItem
+	local HookSetAuctionItem = GameTooltip.SetAuctionItem
+	function GameTooltip.SetAuctionItem(self, atype, index)
+		_, _, self.itemCount = GetAuctionItemInfo(atype, index)
+		self.itemLink = GetAuctionItemLink(atype, index)
+		return HookSetAuctionItem(self, atype, index)
+	end
+	-- .SetAuctionSellItem, There is no GetAuctionSellItemLink
+	--local HookSetAuctionSellItem = GameTooltip.SetAuctionSellItem
+	--function GameTooltip.SetAuctionSellItem(self)
+	--	_, _, self.itemCount = GetAuctionSellItemInfo()
+	--	self.itemLink = ???
+	--	return HookSetAuctionSellItem(self)
+	--end
+	-- .SetTradePlayerItem
+	local HookSetTradePlayerItem = GameTooltip.SetTradePlayerItem
+	function GameTooltip.SetTradePlayerItem(self, index)
+		self.itemLink = GetTradePlayerItemLink(index)
+		return HookSetTradePlayerItem(self, index)
+	end
+	-- .SetTradeTargetItem
+	local HookSetTradeTargetItem = GameTooltip.SetTradeTargetItem
+	function GameTooltip.SetTradeTargetItem(self, index)
+		self.itemLink = GetTradeTargetItemLink(index)
+		return HookSetTradeTargetItem(self, index)
 	end
 end
 
--- 银行 copy from FrameXML/BankFrame.lua
-local Bliz_BankFrameItemButtonGeneric_OnClick = BankFrameItemButtonGeneric_OnClick;
-BankFrameItemButtonGeneric_OnClick = function(button)
-	if ChatFrameEditBox:IsVisible() and IsShiftKeyDown() and not this.isBag and button == "LeftButton" then
-		ChatFrameEditBox:Insert(LinkTrans(GetContainerItemLink(BANK_CONTAINER, this:GetID())));
-	else
-		Bliz_BankFrameItemButtonGeneric_OnClick(button)
-	end
-end
-
-local Bliz_GameTooltip_SetLootItem = GameTooltip.SetLootItem;
-GameTooltip.SetLootItem = function(self, slot)
-	Bliz_GameTooltip_SetLootItem(self, slot);
-	AppendItemInfo(self, LinkToID(GetLootSlotLink(slot)));
-end
-
-local Bliz_SetHyperlink = GameTooltip.SetHyperlink;
-GameTooltip.SetHyperlink = function(self, link)
-	Bliz_SetHyperlink(self, link);
-	local _, _, linkType, itemIdStr = string.find(link, "(%l+):(%d+)");
-	if linkType == "item" then
-		AppendItemInfo(self, tonumber(itemIdStr));
-	end
-end
-
-local Bliz_GameTooltip_SetLootRollItem = GameTooltip.SetLootRollItem;
-GameTooltip.SetLootRollItem = function(self, rollID)
-	Bliz_GameTooltip_SetLootRollItem(self, rollID);
-	local _, _, linkType, itemIdStr = string.find(GetLootRollItemLink(rollID), "(%l+):(%d+)");
-	if linkType == "item" then
-		AppendItemInfo(self, tonumber(itemIdStr));
-	end
-end
-
-local Bliz_SetItemRef = SetItemRef;
-SetItemRef = function(item, link, button)
-	local itemType, itemId;
-	if not IsControlKeyDown() then
-		itemId = LinkToID(item);
-		if strsub(item, 1, 4) == "item" then
-			if RDbItems[itemId] then
-				itemType = "item";
-				if IsShiftKeyDown() and ChatFrameEditBox:IsVisible() then
-					if RDbItemsCC == "en" then -- 强制选择,而不是使用 LinkTrans 来决定. 当转发聊天窗口中的 item 时
-						link = gsub(link, "%[([^%]]+)%]", "[".. RDbItems[itemId][1] .."]");
-					elseif RDbItemsCC == "cn" then
-						link = gsub(link, "%[([^%]]+)%]", "[".. RDbItems[itemId][2] .."]");
-					end
-				end
-			end;
-		elseif RDbItemsEnchant and strsub(item, 1, 7) == "enchant" and RDbItemsEnchant[itemId] then
-			itemType = "enchant";
-			if IsShiftKeyDown() and ChatFrameEditBox:IsVisible() then
-				if RDbItemsCC == "en" then
-					link = gsub(link, "%[([^%]]+)%]", "[".. RDbItemsEnchant[itemId][1] .."]");
-				elseif RDbItemsCC == "cn" then
-					link = gsub(link, "%[([^%]]+)%]", "[".. RDbItemsEnchant[itemId][2] .."]");
-				end
-			end
-		end
-	end
-
-	Bliz_SetItemRef(item, link, button);
-
-	if IsShiftKeyDown() then
-		if not ChatFrameEditBox:IsVisible() and BrowseName ~= nil and BrowseName:IsVisible() and itemType == "item" then
-			BrowseName:SetText(RDbItems[itemId][1]);
-		end -- 1.121 附魔不可以附在纸上, 因此不考虑拍卖行中的附魔相关
-	elseif itemType == "item" then
-		AppendItemInfo(ItemRefTooltip, itemId); -- 实际对 link 的更改并不会影响 Tooltip 的显示
-	elseif itemType == "enchant" then
-		ItemRefTooltip:AddLine('|cffaaaaaa' .. RDbItemsEnchant[itemId][LANG] .. '|r');
-		ItemRefTooltip:Show();
-	end
-end
-
-local Bliz_GameTooltip_SetAuctionItem = GameTooltip.SetAuctionItem;
-GameTooltip.SetAuctionItem = function(self, type, index)
-	Bliz_GameTooltip_SetAuctionItem(self, type, index);
-	AppendItemInfo(self, LinkToID(GetAuctionItemLink(type, index)));
-end
-
--- 任务
-local Bliz_GameTooltip_SetQuestItem = GameTooltip.SetQuestItem;
-GameTooltip.SetQuestItem = function(self, itemType, index)
-	Bliz_GameTooltip_SetQuestItem(self, itemType, index);
-	AppendItemInfo(self, LinkToID(GetQuestItemLink(itemType,index)));
-end
-local Bliz_GameTooltip_SetQuestLogItem = GameTooltip.SetQuestLogItem;
-GameTooltip.SetQuestLogItem = function(self, itemType, index)
-	if itemType then
-		Bliz_GameTooltip_SetQuestLogItem(self, itemType, index);
-		AppendItemInfo(self, LinkToID(GetQuestLogItemLink(itemType,index)));
-	end
-end
-
--- 商业技能
-local Bliz_GameTooltip_SetTradeSkillItem = GameTooltip.SetTradeSkillItem;
-GameTooltip.SetTradeSkillItem = function(self, index, id)
-	Bliz_GameTooltip_SetTradeSkillItem(self, index, id);
-	local _, _,linkType, itemIdStr = string.find(id and GetTradeSkillReagentItemLink(index, id) or GetTradeSkillItemLink(index), "(%l+):(%d+)");
-	local itemId = tonumber(itemIdStr);
-	if linkType == "item" and RDbItems[itemId] then
-		AppendItemInfo(self, itemId, id) -- 有ID表示商业制造的物品所需求的物品
-	end
-end
-
-
--- 专业训练师, 可通过 GameTooltip:SetTrainerService 获得, 但是由于 classic 不支持 GetTrainerServiceItemLink 从而无法获得物品的 ID 值
-
--- 附魔, 材料
-local Bliz_GameTooltip_SetCraftItem = GameTooltip.SetCraftItem;
-GameTooltip.SetCraftItem = function(self, index, id)
-	Bliz_GameTooltip_SetCraftItem(self, index, id);
-	local itemId = LinkToID(GetCraftReagentItemLink(index, id))
-	AppendItemInfo(self, itemId, true)
-end
-
--- 附魔,依赖于 RDbItemsEnchant
-local function EnchantLinkTrans(link, c)
-	if not c then c = RDbItemsCC end;
-	if LANG == 1 then -- 中文客户端
-		if c == "en" then
-			local enchantId = LinkToID(link);
-			if RDbItemsEnchant[enchantId] then
-				link = gsub(link, "%[([^%]]+)%]", "[".. RDbItemsEnchant[enchantId][1] .."]")
-			end
-		end
-	else
-		if c == "cn" then
-			local enchantId = LinkToID(link);
-			if RDbItemsEnchant[enchantId] then
-				link = gsub(link, "%[([^%]]+)%]", "[".. RDbItemsEnchant[enchantId][2] .."]")
-			end
-		end
-	end
-	return link;
-end
-
-if RDbItemsEnchant then
-	local Bliz_GameTooltip_SetCraftSpell = GameTooltip.SetCraftSpell;
-	GameTooltip.SetCraftSpell = function(self, index)
-		Bliz_GameTooltip_SetCraftSpell(self, index);
-		-- local _, _,linkType, itemIdStr = string.find(GetCraftItemLink(index),"(%l+):(%d+)")
-		-- DEFAULT_CHAT_FRAME:AddMessage(linkType .. " - " .. itemIdStr)
-		local enchantId = LinkToID(GetCraftItemLink(index));
-		if RDbItemsEnchant[enchantId] then
-			self:AddLine( '|cffaaaaaa' .. RDbItemsEnchant[enchantId][LANG] .. '|r' );
-			self:Show();
-		end
-	end
-end
-
--- 购买
-local Bliz_GameTooltip_SetMerchantItem = GameTooltip.SetMerchantItem;
-GameTooltip.SetMerchantItem = function(self, index)
-	Bliz_GameTooltip_SetMerchantItem(self, index);
-	local itemId = LinkToID(GetMerchantItemLink(index));
-	AppendItemInfo(self, itemId, true)
-end
-
--- 点击商业技能时
-local Bliz_GetTradeSkillReagentItemLink,Bliz_GetTradeSkillItemLink = GetTradeSkillReagentItemLink,GetTradeSkillItemLink;
-local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkTrans(Bliz_GetTradeSkillReagentItemLink(index, id)) end
-local function Trans_GetTradeSkillItemLink(index) return LinkTrans(Bliz_GetTradeSkillItemLink(index)) end
-
--- 附魔
-local Bliz_GetCraftItemLink, Bliz_GetCraftReagentItemLink = GetCraftItemLink, GetCraftReagentItemLink;
-local function Trans_GetCraftItemLink(index) return EnchantLinkTrans(Bliz_GetCraftItemLink(index)) end;
-local function Trans_GetCraftReagentItemLink(index, id) return LinkTrans(Bliz_GetCraftReagentItemLink(index, id)) end;
 
 -- 拍卖行物品
 local Bliz_GetAuctionItemLink = GetAuctionItemLink;
-local function Trans_GetAuctionItemLink(ty, index) return LinkTrans(Bliz_GetAuctionItemLink(ty, index)) end;
-
+local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index), RDbItemsCC) end;
 -- 商人
 local Bliz_GetMerchantItemLink = GetMerchantItemLink;
-local function Trans_GetMerchantItemLink(index) return LinkTrans(Bliz_GetMerchantItemLink(index)) end;
-
+local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index), RDbItemsCC) end;
+-- 背包物品
+local Bliz_GetContainerItemLink = GetContainerItemLink;
+local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot), RDbItemsCC) end;
 -- 查看装备
 local Bliz_GetInventoryItemLink = GetInventoryItemLink;
-local function Trans_GetInventoryItemLink(unit, slot) return LinkTrans(Bliz_GetInventoryItemLink(unit, slot)) end;
+local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot), RDbItemsCC) end;
+-- 商业技能
+local Bliz_GetTradeSkillItemLink = GetTradeSkillItemLink
+local Bliz_GetTradeSkillReagentItemLink = GetTradeSkillReagentItemLink
+local function Trans_GetTradeSkillItemLink(index) return LinkLocale(Bliz_GetTradeSkillItemLink(index), RDbItemsCC) end
+local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(Bliz_GetTradeSkillReagentItemLink(index, id), RDbItemsCC) end
+-- 附魔
+-- local Bliz_GetCraftItemLink = GetCraftItemLink
+-- local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
+-- local function Trans_GetCraftItemLink(index) return EnchantLinkTrans(Bliz_GetCraftItemLink(index)) end;
+-- local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCC) end;
 
-
---[[ -- EQL3 的更好..任务加上任务等级, copy from FrameXML/QuestLogFrame.lua
-local Bliz_QuestLogTitleButton_OnClick = QuestLogTitleButton_OnClick;
-QuestLogTitleButton_OnClick = function(button)
-	if ChatFrameEditBox:IsVisible() and IsShiftKeyDown() then
-		local title, lvl,elite = GetQuestLogTitle(this:GetID() + FauxScrollFrame_GetOffset(QuestLogListScrollFrame));
-		ChatFrameEditBox:Insert("[".. lvl .. (elite == "Elite" and "+" or "") .."]" .. title );
+local function HookGetXXXItemLink(mode)
+	if not mode then return end
+	if mode == "cn"  then
+		GetAuctionItemLink = Trans_GetAuctionItemLink
+		GetMerchantItemLink = Trans_GetMerchantItemLink
+		GetContainerItemLink = Trans_GetContainerItemLink
+		GetInventoryItemLink = Trans_GetInventoryItemLink
+		GetTradeSkillItemLink = Trans_GetTradeSkillItemLink
+		GetTradeSkillReagentItemLink = Trans_GetTradeSkillReagentItemLink
+		--if RDbItemsEnchant then
+		--	GetCraftItemLink = Trans_GetCraftItemLink
+		--	GetCraftReagentItemLink = Trans_GetCraftReagentItemLink
+		--end
 	else
-		Bliz_QuestLogTitleButton_OnClick(button);
-	end
-end
---]]
-
-local function TransHook(mode)
-	if not mode then
-		GetTradeSkillReagentItemLink,GetTradeSkillItemLink = Bliz_GetTradeSkillReagentItemLink,Bliz_GetTradeSkillItemLink;
-		if RDbItemsEnchant then GetCraftItemLink = Bliz_GetCraftItemLink end;
-		GetCraftReagentItemLink = Bliz_GetCraftReagentItemLink;
-		GetAuctionItemLink = Bliz_GetAuctionItemLink;
-		GetMerchantItemLink = Bliz_GetMerchantItemLink;
+		GetAuctionItemLink = Bliz_GetAuctionItemLink
+		GetMerchantItemLink = Bliz_GetMerchantItemLink
+		GetContainerItemLink = Bliz_GetContainerItemLink
 		GetInventoryItemLink = Bliz_GetInventoryItemLink
-		GetContainerItemLink = Bliz_GetContainerItemLink;
-	else
-		GetTradeSkillReagentItemLink,GetTradeSkillItemLink = Trans_GetTradeSkillReagentItemLink, Trans_GetTradeSkillItemLink;
-		if RDbItemsEnchant then GetCraftItemLink = Trans_GetCraftItemLink end;
-		GetCraftReagentItemLink = Trans_GetCraftReagentItemLink;
-		GetAuctionItemLink = Trans_GetAuctionItemLink;
-		GetMerchantItemLink = Trans_GetMerchantItemLink;
-		GetInventoryItemLink = Trans_GetInventoryItemLink;
-		GetContainerItemLink = Trans_GetContainerItemLink;
+		GetTradeSkillItemLink = Bliz_GetTradeSkillItemLink
+		GetTradeSkillReagentItemLink = Bliz_GetTradeSkillReagentItemLink
+		--if RDbItemsEnchant then
+		--	GetCraftItemLink = Bliz_GetCraftItemLink
+		--	GetCraftReagentItemLink = Bliz_GetCraftReagentItemLink
+		--end
 	end
 end
 
- --
-
-local function ModeUpdate(self)
+local function StateUpdate(self)
 	local mode = RDbItemsCC -- ## SavedVariables
-	TransHook(mode)
+	HookGetXXXItemLink(mode)
 	if mode == "en" then
 		self:SetText("E")
 	elseif mode == "cn" then
@@ -337,74 +273,88 @@ local function ModeUpdate(self)
 	end
 end
 
-local function ModeToggle(self)
-	if RDbItemsCC == "en" then
-		RDbItemsCC = "cn"
-	elseif RDbItemsCC == "cn" then
-		RDbItemsCC = nil
-	else
-		RDbItemsCC = "en"
-	end
-	ModeUpdate(self)
-end
-
 function RDbFrameOnLoaded(self)
-	self.ModeToggle = ModeToggle
+	function self.TriStateToggle(self)
+		if RDbItemsCC == "en" then
+			RDbItemsCC = "cn"
+		elseif RDbItemsCC == "cn" then
+			RDbItemsCC = nil
+		else
+			RDbItemsCC = "en"
+		end
+		StateUpdate(self)
+	end
 	self:RegisterEvent("VARIABLES_LOADED");
 	self:SetScript("OnEvent", function()
-		local evt = event
-		if evt == "VARIABLES_LOADED" then
-			ModeUpdate(self)
+		if event == "VARIABLES_LOADED" then
+			StateUpdate(self)
 		end
 	end)
+	HookGameTooltip()
 	DEFAULT_CHAT_FRAME:AddMessage(self:GetName() .. " loaded")
-	-- Copy From FrameXML/ContainerFrame.lua,
-	ContainerFrameItemButton_OnEnter = function()
-		if not this.hasItem then return end
-		if ( IsControlKeyDown() ) then -- 由于这个版本没找到 IsDressableItem 或类似方法, 因此不检测
-			ShowInspectCursor();
-		elseif IsShiftKeyDown() then
-			ResetCursor();
-		elseif MerchantFrame:IsVisible() then
-			ShowContainerSellCursor(this:GetParent():GetID(), this:GetID());
-		elseif this.readable then
-			ShowInspectCursor();
-		else
-			ResetCursor();
-		end
-
-		if GameTooltip:IsVisible() then return end;
-		GameTooltip:SetOwner(this, "ANCHOR_LEFT");
-		local bag = this:GetParent():GetID();
-		local slot = this:GetID();
-		if bag == KEYRING_CONTAINER then -- 钥匙链并不属于背包中的物品, 而是像一个无限增长的装备slot
-			Bliz_GameTooltip_SetInventoryItem(GameTooltip, "player", KeyRingButtonIDToInvSlotID(slot)); -- 在 github 中搜索 KEYRING_CONTAINER GameTooltip 获得这个 API
-		else
-			local hasCooldown, repairCost = GameTooltip:SetBagItem(bag, slot);
-			if ( hasCooldown ) then
-				this.updateTooltip = TOOLTIP_UPDATE_TIME;
-			else
-				this.updateTooltip = nil;
-			end
-
-			if ( InRepairMode() and (repairCost and repairCost > 0) ) then
-				GameTooltip:AddLine(TEXT(REPAIR_COST), "", 1, 1, 1);
-				SetTooltipMoney(GameTooltip, repairCost);
-			end
-		end
-		local itemId = LinkToID(GetContainerItemLink(bag, slot))
-		AppendItemInfo(GameTooltip, itemId, MerchantFrame:IsVisible())
-	end
 end
 --[[
 用于将物品以指定的文字描述发送到聊天窗口,
- - @(auto): 直接使用当前客户端语言, 即不进行处理
- - E(英): 当往聊天窗口输物品链接时,使用英文名称
- - 中(中文): 当往聊天窗口输物品链接时,使用中文名称
+ - "--"(auto): 直接使用当前客户端语言, 即不进行处理
+ - "E"(英): 当往聊天窗口输物品链接时,使用英文名称
+ - "中"(中文): 当往聊天窗口输物品链接时,使用中文名称
 
 特性:
  - 支持 shift + 点击 输出到拍卖行, 这将会强制以英文输出, 目前支持 "背包","专业","聊天窗口中链接"
+--]]
 
-更新:
- - 移除旧的slash模式, 通过点击聊天窗口的 `@` 按钮切换模式
+
+--[[
+-- 需要 MODIFIER_STATE_CHANGED 事件, "OnUpdate" 损耗似乎有点高
+-- 需要一个 item 上的动画
+
+local function SetBagItemGlow(bagId, slot)
+	local item = nil
+	if IsAddOnLoaded("OneBag3") then
+		item = _G["OneBagFrameBag"..bagId.."Item"..slot]
+	else
+		for i = 1, NUM_CONTAINER_FRAMES, 1 do
+			local frame = getglobal("ContainerFrame"..i)
+			if frame:GetID() == bagId and frame:IsShown() then
+				item = getglobal("ContainerFrame"..i.."Item"..(GetContainerNumSlots(bagId) + 1 - slot))
+			end
+		end
+	end
+	if item then
+		--item.NewItemTexture:SetAtlas("bags-glow-orange")
+		--item.NewItemTexture:Show()
+		--item.flashAnim:Play()
+		-- item.NormalTexture:Play()
+		-- "NormalTexture"
+		-- trace(tostring(item:GetName()) .. ", bagid: ".. bagId ..", slot: ".. slot)
+	end
+end
+local function GlowCheapestGrey()
+	local lastPrice, lastBag, lastSlot
+	for bag = 0, NUM_BAG_SLOTS do
+		for bagSlot = 1, GetContainerNumSlots(bag) do
+			local link = GetContainerItemLink(bag, bagSlot)
+			if link then
+				local itemId = LinkToID(link)
+				local itemInfo = RDbItems[itemId]
+				if itemInfo then
+					local _, _, itemRarity = GetItemInfo(itemId)
+					local vendorPrice = itemInfo[IDX_PRICE]
+					if itemRarity == 0 and vendorPrice > 0 then
+						local _, itemCount = GetContainerItemInfo(bag, bagSlot)
+						local totalVendorPrice = vendorPrice * itemCount
+						if not lastPrice or lastPrice > totalVendorPrice then
+							lastPrice = totalVendorPrice
+							lastBag = bag
+							lastSlot = bagSlot
+						end
+					end
+				end
+			end
+		end
+	end
+	if lastSlot then
+		SetBagItemGlow(lastBag, lastSlot)
+	end
+end
 --]]
