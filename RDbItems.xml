@@ -1,7 +1,8 @@
 <Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
 ..\FrameXML\UI.xsd">
-	<Script file="RDbItems.lua"/>
 	<Script file="Hook.lua"/>
+	<Script file="RDbItems.lua"/>
+	<Script file="RDbEnchants.lua"/>
 	<Button name="RDbFrame" parent="UIParent" hidden="false" text="@">
 		<Size><AbsDimension x="24" y="24"/></Size>
 		<Anchors><Anchor point="BOTTOM" relativeTo="ChatFrameMenuButton" relativePoint="TOP" /></Anchors>

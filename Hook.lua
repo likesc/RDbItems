@@ -1,3 +1,7 @@
+-- global
+RDbItems = {}
+local itemDB = RDbItems
+
 -- [25] = {"Worn Shortsword", "破损的短剑", 2, 7},
 local IDX_enUS = 1
 local IDX_zhCN = 2
@@ -11,15 +15,17 @@ local function trace(s)
 	DEFAULT_CHAT_FRAME:AddMessage(tostring(s))
 end
 
--- item:6948:0:0:0
-local function LinkToID(link)
-	local _, _, id = string.find(link, ":(%d+):")
-	return tonumber(id)
+local function LoadItemInfo(type, sid)
+	local tab = itemDB[type]
+	return tab and tab[tonumber(sid)] or nil
 end
 
-local function LinkToName(link)
-	local _, _, name = string.find(link,"%[([^%]]+)%]")
-	return name
+-- item:6948:0:0:0
+-- |Hitem:7073:0:0:0:0:0:0:0:80:0:0:0:0|h
+-- |Henchant:59387|h
+local function LinkParse(link)
+	local _, _, type, sid = string.find(link, "|H(%l+):(%d+)")
+	return type, sid
 end
 
 local function LinkLocale(link, cc)
@@ -27,11 +33,10 @@ local function LinkLocale(link, cc)
 	if cc == "en" then
 		idx = IDX_enUS
 	end
-	if not cc or not link then 
-		return link 
+	if not cc or not link then
+		return link
 	end
-	local itemId = LinkToID(link)
-	local itemInfo = RDbItems[itemId]
+	local itemInfo = LoadItemInfo(LinkParse(link))
 	if itemInfo then
 		link = gsub(link, "%[([^%]]+)%]", "[".. itemInfo[idx] .."]")
 	end
@@ -52,9 +57,14 @@ local function LinkOppoSite(link, cc)
 	return link
 end
 
-local function AddLocales(tooltip, itemId, count)
-	local itemInfo = RDbItems[itemId]
+local function AddLocales(tooltip, type, sid, count)
+	local itemInfo = LoadItemInfo(type, sid)
 	if not itemInfo then
+		return
+	end
+	if type ~= "item" then
+		tooltip:AddLine(itemInfo[OPLANG])
+		tooltip:Show()
 		return
 	end
 	local lv = itemInfo[IDX_LV]
@@ -81,20 +91,27 @@ local function HookGameTooltip()
 		if not GameTooltip.itemLink then
 			return
 		end
-		local itemId = LinkToID(GameTooltip.itemLink)
-		local count = GameTooltip.itemCount or 1
-		AddLocales(GameTooltip, itemId, count)
+		local type, sid = LinkParse(GameTooltip.itemLink)
+		AddLocales(GameTooltip, type, sid, GameTooltip.itemCount)
 	end)
 	-- SetItemRef, Called to handle clicks on Blizzard hyperlinks in chat
 	local HookSetItemRef = SetItemRef
 	SetItemRef = function(link, text, button)
-		local item, _, id = string.find(text, "item:(%d+):.*")
-		if item and IsShiftKeyDown() and ChatFrameEditBox:IsVisible() and RDbItemsCC then
-			text = LinkLocale(text, RDbItemsCC)
+		local type, sid = LinkParse(text)
+		if not sid then
+			HookSetItemRef(link, text, button)
+			return
+		end
+		if IsShiftKeyDown() and ChatFrameEditBox:IsVisible() and RDbItemsCC then
+			local idx = RDbItemsCC == "cn" and IDX_zhCN or IDX_enUS
+			local inf = LoadItemInfo(type, sid)
+			if inf then
+				text = gsub(text, "%[([^%]]+)%]", "[".. inf[idx] .."]")
+			end
 		end
 		HookSetItemRef(link, text, button)
-		if item and not IsAltKeyDown() and not IsShiftKeyDown() and not IsControlKeyDown() then
-			AddLocales(ItemRefTooltip, tonumber(id))
+		if not IsAltKeyDown() and not IsShiftKeyDown() and not IsControlKeyDown() then
+			AddLocales(ItemRefTooltip, type, sid)
 		end
 	end
 	-- .SetBagItem
@@ -189,11 +206,11 @@ local function HookGameTooltip()
 		self.itemLink = GetAuctionItemLink(atype, index)
 		return HookSetAuctionItem(self, atype, index)
 	end
-	-- .SetAuctionSellItem, There is no GetAuctionSellItemLink
+	-- .SetAuctionSellItem
 	--local HookSetAuctionSellItem = GameTooltip.SetAuctionSellItem
 	--function GameTooltip.SetAuctionSellItem(self)
 	--	_, _, self.itemCount = GetAuctionSellItemInfo()
-	--	self.itemLink = ???
+	--	self.itemLink = ??? There is no GetAuctionSellItemLink
 	--	return HookSetAuctionSellItem(self)
 	--end
 	-- .SetTradePlayerItem
@@ -229,10 +246,10 @@ local Bliz_GetTradeSkillReagentItemLink = GetTradeSkillReagentItemLink
 local function Trans_GetTradeSkillItemLink(index) return LinkLocale(Bliz_GetTradeSkillItemLink(index), RDbItemsCC) end
 local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(Bliz_GetTradeSkillReagentItemLink(index, id), RDbItemsCC) end
 -- 附魔
--- local Bliz_GetCraftItemLink = GetCraftItemLink
--- local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
--- local function Trans_GetCraftItemLink(index) return EnchantLinkTrans(Bliz_GetCraftItemLink(index)) end;
--- local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCC) end;
+local Bliz_GetCraftItemLink = GetCraftItemLink
+local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
+local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCC) end;
+local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCC) end;
 
 local function HookGetXXXItemLink(mode)
 	if not mode then return end
@@ -243,10 +260,8 @@ local function HookGetXXXItemLink(mode)
 		GetInventoryItemLink = Trans_GetInventoryItemLink
 		GetTradeSkillItemLink = Trans_GetTradeSkillItemLink
 		GetTradeSkillReagentItemLink = Trans_GetTradeSkillReagentItemLink
-		--if RDbItemsEnchant then
-		--	GetCraftItemLink = Trans_GetCraftItemLink
-		--	GetCraftReagentItemLink = Trans_GetCraftReagentItemLink
-		--end
+		GetCraftReagentItemLink = Trans_GetCraftReagentItemLink
+		GetCraftItemLink = Trans_GetCraftItemLink
 	else
 		GetAuctionItemLink = Bliz_GetAuctionItemLink
 		GetMerchantItemLink = Bliz_GetMerchantItemLink
@@ -254,10 +269,8 @@ local function HookGetXXXItemLink(mode)
 		GetInventoryItemLink = Bliz_GetInventoryItemLink
 		GetTradeSkillItemLink = Bliz_GetTradeSkillItemLink
 		GetTradeSkillReagentItemLink = Bliz_GetTradeSkillReagentItemLink
-		--if RDbItemsEnchant then
-		--	GetCraftItemLink = Bliz_GetCraftItemLink
-		--	GetCraftReagentItemLink = Bliz_GetCraftReagentItemLink
-		--end
+		GetCraftReagentItemLink = Bliz_GetCraftReagentItemLink
+		GetCraftItemLink = Bliz_GetCraftItemLink
 	end
 end
 
@@ -335,10 +348,10 @@ local function GlowCheapestGrey()
 		for bagSlot = 1, GetContainerNumSlots(bag) do
 			local link = GetContainerItemLink(bag, bagSlot)
 			if link then
-				local itemId = LinkToID(link)
-				local itemInfo = RDbItems[itemId]
-				if itemInfo then
-					local _, _, itemRarity = GetItemInfo(itemId)
+				local type, sid = LinkParse(link)
+				local itemInfo = LoadItemInfo(type, sid)
+				if itemInfo and type == "item" then
+					local _, _, itemRarity = GetItemInfo(tonumber(sid))
 					local vendorPrice = itemInfo[IDX_PRICE]
 					if itemRarity == 0 and vendorPrice > 0 then
 						local _, itemCount = GetContainerItemInfo(bag, bagSlot)

@@ -1,4 +1,4 @@
-RDbItems = {
+RDbItems.item = {
 	[25] = {"Worn Shortsword", "破损的短剑", 2, 7},
 	[35] = {"Bent Staff", "弯曲的法杖", 2, 9},
 	[36] = {"Worn Mace", "用旧的钉锤", 2, 7},
