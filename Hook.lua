@@ -94,6 +94,26 @@ local function HookGameTooltip()
 		local type, sid = LinkParse(GameTooltip.itemLink)
 		AddLocales(GameTooltip, type, sid, GameTooltip.itemCount)
 	end)
+	if AtlasLootItem_OnEnter then
+		-- AtlasLoot\Core\AtlasLoot.lua "AtlasLootItem_OnEnter()"
+		local Hook_AtlasLootItem_OnEnter = AtlasLootItem_OnEnter
+		AtlasLootItem_OnEnter = function()
+			local sid = this.itemID
+			Hook_AtlasLootItem_OnEnter()
+			if this.itemID == 0 then
+				return
+			end
+			local st = string.sub(sid, 1, 1)
+			local type = "item"
+			if st == "e" then
+				type = "enchant"
+				sid = string.sub(sid, 2)
+			elseif st == "s" then
+				return
+			end
+			AddLocales(AtlasLootTooltip, type, sid)
+		end
+	end
 	-- SetItemRef, Called to handle clicks on Blizzard hyperlinks in chat
 	local HookSetItemRef = SetItemRef
 	SetItemRef = function(link, text, button)
