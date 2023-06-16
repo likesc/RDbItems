@@ -185,18 +185,18 @@ local function HookGameTooltip()
 	end
 	-- .SetMerchantItem
 	local HookSetMerchantItem = GameTooltip.SetMerchantItem
-	function GameTooltip.SetMerchantItem(self, merchantIndex)
-		self.itemLink = GetMerchantItemLink(merchantIndex)
+	function GameTooltip.SetMerchantItem(self, index)
+		self.itemLink = GetMerchantItemLink(index)
 		self.itemCount = 0 -- 0 means don't show addon price
-		return HookSetMerchantItem(self, merchantIndex)
+		return HookSetMerchantItem(self, index)
 	end
-	-- .SetBuybackItem
-	local HookSetBuybackItem = GameTooltip.SetBuybackItem
-	function GameTooltip.SetBuybackItem(self, merchantIndex)
-		self.itemLink = GetMerchantItemLink(merchantIndex)
-		self.itemCount = 0 -- 0 means don't show addon price
-		return HookSetBuybackItem(self, merchantIndex)
-	end
+	-- .SetBuybackItem, TODO
+	--local HookSetBuybackItem = GameTooltip.SetBuybackItem
+	--function GameTooltip.SetBuybackItem(self, index)
+	--	self.itemLink = ???(index)
+	--	self.itemCount = 0 -- 0 means don't show addon price
+	--	return HookSetBuybackItem(self, index)
+	--end
 	-- .SetCraftItem
 	local HookSetCraftItem = GameTooltip.SetCraftItem
 	function GameTooltip.SetCraftItem(self, skill, slot)
