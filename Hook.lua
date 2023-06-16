@@ -7,6 +7,8 @@ local IDX_enUS = 1
 local IDX_zhCN = 2
 local IDX_LV = 3
 local IDX_PRICE = 4
+-- regexp
+local LinkNameRE = "%[([^%]]+)%]"
 
 -- Opposite language
 local OPLANG = GetLocale() == "zhCN" and IDX_enUS or IDX_zhCN
@@ -38,7 +40,7 @@ local function LinkLocale(link, cc)
 	end
 	local itemInfo = LoadItemInfo(LinkParse(link))
 	if itemInfo then
-		link = gsub(link, "%[([^%]]+)%]", "[".. itemInfo[idx] .."]")
+		link = gsub(link, LinkNameRE, "[".. itemInfo[idx] .."]")
 	end
 	return link
 end
@@ -69,7 +71,7 @@ local function AddLocales(tooltip, type, sid, count)
 	end
 	local lv = itemInfo[IDX_LV]
 	if lv > 1 then
-		tooltip:AddDoubleLine(itemInfo[OPLANG], "|cff999999Lv|r|cffffffff".. lv .. "|r")
+		tooltip:AddDoubleLine(itemInfo[OPLANG], "|cff777777Lv|r|cffffffff".. lv .. "|r")
 	else
 		tooltip:AddLine(itemInfo[OPLANG])
 	end
@@ -122,11 +124,21 @@ local function HookGameTooltip()
 			HookSetItemRef(link, text, button)
 			return
 		end
-		if IsShiftKeyDown() and ChatFrameEditBox:IsVisible() and RDbItemsCC then
-			local idx = RDbItemsCC == "cn" and IDX_zhCN or IDX_enUS
+		if IsShiftKeyDown() then
 			local inf = LoadItemInfo(type, sid)
-			if inf then
-				text = gsub(text, "%[([^%]]+)%]", "[".. inf[idx] .."]")
+			if ChatFrameEditBox:IsVisible() then
+				if inf and RDbItemsCC then
+					local idx = RDbItemsCC == "cn" and IDX_zhCN or IDX_enUS
+					text = gsub(text, LinkNameRE, "[".. inf[idx] .."]")
+				end
+			elseif BrowseName and BrowseName:IsVisible() then
+				if inf then
+					local idx = OPLANG == IDX_zhCN and IDX_enUS or IDX_zhCN
+					BrowseName:SetText(inf[idx])
+				else
+					local _, _, name = string.find(text, LinkNameRE)
+					BrowseName:SetText(name)
+				end
 			end
 		end
 		HookSetItemRef(link, text, button)
@@ -270,6 +282,18 @@ local Bliz_GetCraftItemLink = GetCraftItemLink
 local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
 local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCC) end;
 local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCC) end;
+
+-- 打开拍卖行时 shift 点击背包物品
+local HookContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick
+ContainerFrameItemButton_OnClick = function(button, ignoreShift)
+	if IsShiftKeyDown() and not IsControlKeyDown() and not ignoreShift and not ChatFrameEditBox:IsVisible() and BrowseName and BrowseName:IsVisible() then
+		local link = Bliz_GetContainerItemLink(this:GetParent():GetID(), this:GetID())
+		local _, _, name = string.find(link, LinkNameRE)
+		BrowseName:SetText(name)
+	else
+		HookContainerFrameItemButton_OnClick(button, ignoreShift)
+	end
+end
 
 local function HookGetXXXItemLink(mode)
 	if not mode then return end
