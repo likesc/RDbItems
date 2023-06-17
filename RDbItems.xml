@@ -3,23 +3,25 @@
 	<Script file="Hook.lua"/>
 	<Script file="RDbItems.lua"/>
 	<Script file="RDbEnchants.lua"/>
-	<Button name="RDbFrame" parent="UIParent" hidden="false" text="--">
-		<Size><AbsDimension x="24" y="24"/></Size>
-		<Anchors><Anchor point="BOTTOM" relativeTo="ChatFrameMenuButton" relativePoint="TOP" /></Anchors>
+	<Button name="RDbFrame" parent="ChatFrameMenuButton" text="--">
+		<Size>
+			<AbsDimension x="22" y="26"/>
+		</Size>
+		<Anchors><Anchor point="BOTTOM" relativePoint="TOP" /></Anchors>
 		<Layers>
 			<Layer level="BACKGROUND">
-				<Texture name="$parentTop" file="Interface\ToolTips\UI-Tooltip-Border">
+				<Texture file="Interface\ToolTips\UI-Tooltip-Border">
 					<Size>
-						<AbsDimension x="30" y="16"/>
+						<AbsDimension x="26" y="16"/>
 					</Size>
 					<Anchors>
 						<Anchor point="TOP"/>
 					</Anchors>
 					<TexCoords left="0.5" right="0.75" top="0" bottom="1"/>
 				</Texture>
-				<Texture name="$parentBottom" file="Interface\ToolTips\UI-Tooltip-Border">
+				<Texture file="Interface\ToolTips\UI-Tooltip-Border">
 					<Size>
-						<AbsDimension x="30" y="16"/>
+						<AbsDimension x="26" y="16"/>
 					</Size>
 					<Anchors>
 						<Anchor point="BOTTOM"/>
@@ -28,7 +30,7 @@
 				</Texture>
 			</Layer>
 		</Layers>
-		<NormalText name="$parentText" inherits="GameFontNormal"/>
+		<NormalText inherits="GameFontNormal"/>
 		<DisabledText inherits="GameFontDisable"/>
 		<HighlightText inherits="GameFontHighlight"/>
 		<HighlightTexture inherits="UIPanelButtonHighlightTexture"/>

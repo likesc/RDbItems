@@ -331,6 +331,15 @@ local function StateUpdate(self)
 end
 
 function RDbFrameOnLoaded(self)
+	if pfUI and pfUI.chat then
+		self:DisableDrawLayer("BACKGROUND")
+		self:ClearAllPoints()
+		self:SetParent(pfUI.chat.left.panelTop)
+		self:SetPoint("TOPRIGHT", pfUI.chat.left, "TOPRIGHT", -38, -1.5)
+		self:SetWidth(16)
+		self:SetHeight(16)
+		self:SetAlpha(0.5)
+	end
 	function self.TriStateToggle(self)
 		if RDbItemsCC == "en" then
 			RDbItemsCC = "cn"
