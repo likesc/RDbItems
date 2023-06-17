@@ -11,7 +11,7 @@ local IDX_PRICE = 4
 local LinkNameRE = "%[([^%]]+)%]"
 
 -- Opposite language
-local OPLANG = GetLocale() == "zhCN" and IDX_enUS or IDX_zhCN
+local OPLANG = GetLocale() == "enUS" and IDX_zhCN or IDX_enUS
 
 local function trace(s)
 	DEFAULT_CHAT_FRAME:AddMessage(tostring(s))
@@ -296,8 +296,7 @@ ContainerFrameItemButton_OnClick = function(button, ignoreShift)
 end
 
 local function HookGetXXXItemLink(mode)
-	if not mode then return end
-	if mode == "cn"  then
+	if mode and ((mode == "cn" and OPLANG == IDX_zhCN) or (mode == "en" and OPLANG == IDX_enUS)) then
 		GetAuctionItemLink = Trans_GetAuctionItemLink
 		GetMerchantItemLink = Trans_GetMerchantItemLink
 		GetContainerItemLink = Trans_GetContainerItemLink

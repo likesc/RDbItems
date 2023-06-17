@@ -2,5 +2,5 @@
 ## Title: |cFF7A43B6RDbItems|r(中英文物品名显示)
 ## SavedVariables: RDbItemsCC
 ## OptionalDeps: pfUI
-## Version 2.2.0
+## Version 2.2.1
 RDbItems.xml
