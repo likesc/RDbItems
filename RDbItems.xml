@@ -3,7 +3,7 @@
 	<Script file="Hook.lua"/>
 	<Script file="RDbItems.lua"/>
 	<Script file="RDbEnchants.lua"/>
-	<Button name="RDbFrame" parent="ChatFrameMenuButton" text="--">
+	<Button parent="ChatFrameMenuButton" hidden="true">
 		<Size>
 			<AbsDimension x="22" y="26"/>
 		</Size>
@@ -36,10 +36,10 @@
 		<HighlightTexture inherits="UIPanelButtonHighlightTexture"/>
 		<Scripts>
 			<OnLoad>
-				RDbFrameOnLoaded(this);
+				RDbItems.Init(this);
 			</OnLoad>
 			<OnClick>
-				this:TriStateToggle();
+				RDbItems.TriStateToggle(this);
 			</OnClick>
 		</Scripts>
 	</Button>

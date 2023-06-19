@@ -1,6 +1,6 @@
 -- global
-RDbItems = {}
-local itemDB = RDbItems
+local itemDB = {}
+RDbItems = itemDB
 
 -- [25] = {"Worn Shortsword", "破损的短剑", 2, 7},
 local IDX_enUS = 1
@@ -13,7 +13,7 @@ local LinkNameRE = "%[([^%]]+)%]"
 -- Opposite language
 local OPLANG = GetLocale() == "enUS" and IDX_zhCN or IDX_enUS
 
-local function trace(s)
+function itemDB.trace(s)
 	DEFAULT_CHAT_FRAME:AddMessage(tostring(s))
 end
 
@@ -295,7 +295,7 @@ ContainerFrameItemButton_OnClick = function(button, ignoreShift)
 	end
 end
 
-local function HookGetXXXItemLink(mode)
+local function HookGetLocaleItemLink(mode)
 	if mode and ((mode == "cn" and OPLANG == IDX_zhCN) or (mode == "en" and OPLANG == IDX_enUS)) then
 		GetAuctionItemLink = Trans_GetAuctionItemLink
 		GetMerchantItemLink = Trans_GetMerchantItemLink
@@ -317,46 +317,46 @@ local function HookGetXXXItemLink(mode)
 	end
 end
 
-local function StateUpdate(self)
+local function StateUpdate(rbtn)
 	local mode = RDbItemsCC -- ## SavedVariables
-	HookGetXXXItemLink(mode)
+	HookGetLocaleItemLink(mode)
 	if mode == "en" then
-		self:SetText("E")
+		rbtn:SetText("E")
 	elseif mode == "cn" then
-		self:SetText("中")
+		rbtn:SetText("中")
 	else
-		self:SetText("--")
+		rbtn:SetText("--")
 	end
 end
-
-function RDbFrameOnLoaded(self)
+-- global functions
+function itemDB.TriStateToggle(rbtn)
+	if RDbItemsCC == "en" then
+		RDbItemsCC = "cn"
+	elseif RDbItemsCC == "cn" then
+		RDbItemsCC = nil
+	else
+		RDbItemsCC = "en"
+	end
+	StateUpdate(rbtn)
+end
+function itemDB.Init(rbtn)
 	if pfUI and pfUI.chat then
-		self:DisableDrawLayer("BACKGROUND")
-		self:ClearAllPoints()
-		self:SetParent(pfUI.chat.left.panelTop)
-		self:SetPoint("TOPRIGHT", pfUI.chat.left, "TOPRIGHT", -38, -1.5)
-		self:SetWidth(16)
-		self:SetHeight(16)
-		self:SetAlpha(0.5)
+		rbtn:DisableDrawLayer("BACKGROUND")
+		rbtn:ClearAllPoints()
+		rbtn:SetParent(pfUI.chat.left.panelTop)
+		rbtn:SetPoint("TOPRIGHT", pfUI.chat.left, "TOPRIGHT", -38, -1.5)
+		rbtn:SetWidth(16)
+		rbtn:SetHeight(16)
+		rbtn:SetAlpha(0.5)
 	end
-	function self.TriStateToggle(self)
-		if RDbItemsCC == "en" then
-			RDbItemsCC = "cn"
-		elseif RDbItemsCC == "cn" then
-			RDbItemsCC = nil
-		else
-			RDbItemsCC = "en"
-		end
-		StateUpdate(self)
-	end
-	self:RegisterEvent("VARIABLES_LOADED");
-	self:SetScript("OnEvent", function()
+	rbtn:RegisterEvent("VARIABLES_LOADED");
+	rbtn:SetScript("OnEvent", function()
 		if event == "VARIABLES_LOADED" then
-			StateUpdate(self)
+			StateUpdate(rbtn)
 		end
 	end)
 	HookGameTooltip()
-	DEFAULT_CHAT_FRAME:AddMessage(self:GetName() .. " loaded")
+	rbtn:Show()
 end
 --[[
 用于将物品以指定的文字描述发送到聊天窗口,
@@ -391,7 +391,7 @@ local function SetBagItemGlow(bagId, slot)
 		--item.flashAnim:Play()
 		-- item.NormalTexture:Play()
 		-- "NormalTexture"
-		-- trace(tostring(item:GetName()) .. ", bagid: ".. bagId ..", slot: ".. slot)
+		-- itemDB.trace(tostring(item:GetName()) .. ", bagid: ".. bagId ..", slot: ".. slot)
 	end
 end
 local function GlowCheapestGrey()
