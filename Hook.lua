@@ -13,8 +13,12 @@ local LinkNameRE = "%[([^%]]+)%]"
 -- Opposite language
 local OPLANG = GetLocale() == "enUS" and IDX_zhCN or IDX_enUS
 
-function itemDB.trace(s)
-	DEFAULT_CHAT_FRAME:AddMessage(tostring(s))
+function itemDB.trace(...)
+	local str = ">>>"
+	for _, v in ipairs(arg) do
+		str = str .. "  " .. tostring(v)
+	end
+	DEFAULT_CHAT_FRAME:AddMessage(str)
 end
 
 local function LoadItemInfo(type, sid)
@@ -295,6 +299,26 @@ ContainerFrameItemButton_OnClick = function(button, ignoreShift)
 	end
 end
 
+-- Hook pfQuest start, ref pfQuest/compat/client.lua
+local pfQuestOrigin, pfQuestLocale
+if pfDB then
+	pfQuestOrigin = pfDB["quests"]["loc"] -- 注：不能直接 HOOK 这个引用, 因为 pfQuest 对它依赖，比如与本地的 GetNumQuestLogEntries() 对比
+	pfQuestLocale = pfQuestOrigin
+	function pfQuestCompat.InsertQuestLink(questid, name)
+		local questid = questid or 0
+		local fallback = name or UNKNOWN
+		local level = pfDB["quests"]["data"][questid] and pfDB["quests"]["data"][questid]["lvl"] or 0
+		local name = pfQuestLocale[questid] and pfQuestLocale[questid]["T"] or fallback
+		local hex = pfUI.api.rgbhex(GetDifficultyColor(level))
+		ChatFrameEditBox:Show()
+		if pfQuest_config["questlinks"] == "1" then
+			ChatFrameEditBox:Insert(hex .. "|Hquest:" .. questid .. ":" .. level .. "|h[" .. name .. "]|h|r")
+		else
+			ChatFrameEditBox:Insert("[" .. name .. "]")
+		end
+	end
+end
+
 local function HookGetLocaleItemLink(mode)
 	if mode and ((mode == "cn" and OPLANG == IDX_zhCN) or (mode == "en" and OPLANG == IDX_enUS)) then
 		GetAuctionItemLink = Trans_GetAuctionItemLink
@@ -305,6 +329,9 @@ local function HookGetLocaleItemLink(mode)
 		GetTradeSkillReagentItemLink = Trans_GetTradeSkillReagentItemLink
 		GetCraftReagentItemLink = Trans_GetCraftReagentItemLink
 		GetCraftItemLink = Trans_GetCraftItemLink
+		if pfDB then
+			pfQuestLocale = mode == "cn" and pfDB["quests"]["zhCN"] or pfDB["quests"]["enUS"]
+		end
 	else
 		GetAuctionItemLink = Bliz_GetAuctionItemLink
 		GetMerchantItemLink = Bliz_GetMerchantItemLink
@@ -314,6 +341,7 @@ local function HookGetLocaleItemLink(mode)
 		GetTradeSkillReagentItemLink = Bliz_GetTradeSkillReagentItemLink
 		GetCraftReagentItemLink = Bliz_GetCraftReagentItemLink
 		GetCraftItemLink = Bliz_GetCraftItemLink
+		pfQuestLocale = pfQuestOrigin
 	end
 end
 
