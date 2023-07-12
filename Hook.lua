@@ -181,12 +181,12 @@ local function HookGameTooltip()
 		HookSetLootItem(self, slot)
 	end
 	-- .SetInboxItem
-	local HookSetInboxItem = GameTooltip.SetInboxItem
-	function GameTooltip.SetInboxItem(self, mailID, attachmentIndex)
-		_, _, self.itemCount = GetInboxItem(mailID)
-		self.itemLink = GetInboxItemLink(mailID, attachmentIndex)
-		return HookSetInboxItem(self, mailID, attachmentIndex)
-	end
+	--local HookSetInboxItem = GameTooltip.SetInboxItem
+	--function GameTooltip.SetInboxItem(self, mailID, attachmentIndex)
+	--	var name, _, count = GetInboxItem(mailID)
+	--	-- there is no GetInboxItemLink
+	--	return HookSetInboxItem(self, mailID, attachmentIndex)
+	--end
 	-- .SetInventoryItem
 	local HookSetInventoryItem = GameTooltip.SetInventoryItem
 	function GameTooltip.SetInventoryItem(self, unit, slot)
