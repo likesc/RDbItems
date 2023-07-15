@@ -94,11 +94,11 @@ local function HookGameTooltip()
 		hookFrame.itemCount = nil
 	end)
 	hookFrame:SetScript("OnShow", function()
-		if not GameTooltip.itemLink then
+		if not hookFrame.itemLink then
 			return
 		end
-		local type, sid = LinkParse(GameTooltip.itemLink)
-		AddLocales(GameTooltip, type, sid, GameTooltip.itemCount)
+		local type, sid = LinkParse(hookFrame.itemLink)
+		AddLocales(GameTooltip, type, sid, hookFrame.itemCount)
 	end)
 	if AtlasLootItem_OnEnter then
 		-- AtlasLoot\Core\AtlasLoot.lua "AtlasLootItem_OnEnter()"
@@ -153,31 +153,32 @@ local function HookGameTooltip()
 	-- .SetBagItem
 	local HookSetBagItem = GameTooltip.SetBagItem
 	function GameTooltip.SetBagItem(self, container, slot)
-		self.itemLink = GetContainerItemLink(container, slot)
+		hookFrame.itemLink = GetContainerItemLink(container, slot)
 		if MerchantFrame:IsVisible() then
-			self.itemCount = 0
+			hookFrame.itemCount = 0
 		else
-			_, self.itemCount = GetContainerItemInfo(container, slot)
+			local _, count = GetContainerItemInfo(container, slot)
+			hookFrame.itemCount = count
 		end
 		return HookSetBagItem(self, container, slot)
 	end
 	-- .SetQuestLogItem
 	local HookSetQuestLogItem = GameTooltip.SetQuestLogItem
 	function GameTooltip.SetQuestLogItem(self, itemType, index)
-		self.itemLink = GetQuestLogItemLink(itemType, index)
-		if not self.itemLink then return end
+		hookFrame.itemLink = GetQuestLogItemLink(itemType, index)
+		if not hookFrame.itemLink then return end
 		return HookSetQuestLogItem(self, itemType, index)
 	end
 	-- .SetQuestItem
 	local HookSetQuestItem = GameTooltip.SetQuestItem
 	function GameTooltip.SetQuestItem(self, itemType, index)
-		self.itemLink = GetQuestItemLink(itemType, index)
+		hookFrame.itemLink = GetQuestItemLink(itemType, index)
 		return HookSetQuestItem(self, itemType, index)
 	end
 	-- .SetLootItem
 	local HookSetLootItem = GameTooltip.SetLootItem
 	function GameTooltip.SetLootItem(self, slot)
-		self.itemLink = GetLootSlotLink(slot)
+		hookFrame.itemLink = GetLootSlotLink(slot)
 		HookSetLootItem(self, slot)
 	end
 	-- .SetInboxItem
@@ -190,75 +191,76 @@ local function HookGameTooltip()
 	-- .SetInventoryItem
 	local HookSetInventoryItem = GameTooltip.SetInventoryItem
 	function GameTooltip.SetInventoryItem(self, unit, slot)
-		self.itemLink = GetInventoryItemLink(unit, slot)
+		hookFrame.itemLink = GetInventoryItemLink(unit, slot)
 		return HookSetInventoryItem(self, unit, slot)
 	end
 	-- .SetLootRollItem
 	local HookSetLootRollItem = GameTooltip.SetLootRollItem
 	function GameTooltip.SetLootRollItem(self, id)
-		self.itemLink = GetLootRollItemLink(id)
+		hookFrame.itemLink = GetLootRollItemLink(id)
 		return HookSetLootRollItem(self, id)
 	end
 	-- .SetMerchantItem
 	local HookSetMerchantItem = GameTooltip.SetMerchantItem
 	function GameTooltip.SetMerchantItem(self, index)
-		self.itemLink = GetMerchantItemLink(index)
-		self.itemCount = 0 -- 0 means don't show addon price
+		hookFrame.itemLink = GetMerchantItemLink(index)
+		hookFrame.itemCount = 0 -- 0 means don't show addon price
 		return HookSetMerchantItem(self, index)
 	end
 	-- .SetBuybackItem, TODO
 	--local HookSetBuybackItem = GameTooltip.SetBuybackItem
 	--function GameTooltip.SetBuybackItem(self, index)
-	--	self.itemLink = ???(index)
-	--	self.itemCount = 0 -- 0 means don't show addon price
+	--	hookFrame.itemLink = ???(index)
+	--	hookFrame.itemCount = 0 -- 0 means don't show addon price
 	--	return HookSetBuybackItem(self, index)
 	--end
 	-- .SetCraftItem
 	local HookSetCraftItem = GameTooltip.SetCraftItem
 	function GameTooltip.SetCraftItem(self, skill, slot)
-		self.itemLink = GetCraftReagentItemLink(skill, slot)
+		hookFrame.itemLink = GetCraftReagentItemLink(skill, slot)
 		return HookSetCraftItem(self, skill, slot)
 	end
 	-- .SetCraftSpell
 	local HookSetCraftSpell = GameTooltip.SetCraftSpell
 	function GameTooltip.SetCraftSpell(self, slot)
-		self.itemLink = GetCraftItemLink(slot)
+		hookFrame.itemLink = GetCraftItemLink(slot)
 		return HookSetCraftSpell(self, slot)
 	end
 	-- .SetTradeSkillItem
 	local HookSetTradeSkillItem = GameTooltip.SetTradeSkillItem
 	function GameTooltip.SetTradeSkillItem(self, skillIndex, reagentIndex)
 		if reagentIndex then
-			self.itemLink = GetTradeSkillReagentItemLink(skillIndex, reagentIndex)
+			hookFrame.itemLink = GetTradeSkillReagentItemLink(skillIndex, reagentIndex)
 		else
-			self.itemLink = GetTradeSkillItemLink(skillIndex)
+			hookFrame.itemLink = GetTradeSkillItemLink(skillIndex)
 		end
 		return HookSetTradeSkillItem(self, skillIndex, reagentIndex)
 	end
 	-- .SetAuctionItem
 	local HookSetAuctionItem = GameTooltip.SetAuctionItem
 	function GameTooltip.SetAuctionItem(self, atype, index)
-		_, _, self.itemCount = GetAuctionItemInfo(atype, index)
-		self.itemLink = GetAuctionItemLink(atype, index)
+		local _, _, count = GetAuctionItemInfo(atype, index)
+		hookFrame.itemCount = count
+		hookFrame.itemLink = GetAuctionItemLink(atype, index)
 		return HookSetAuctionItem(self, atype, index)
 	end
 	-- .SetAuctionSellItem
 	--local HookSetAuctionSellItem = GameTooltip.SetAuctionSellItem
 	--function GameTooltip.SetAuctionSellItem(self)
-	--	_, _, self.itemCount = GetAuctionSellItemInfo()
-	--	self.itemLink = ??? There is no GetAuctionSellItemLink
+	--	_, _, hookFrame.itemCount = GetAuctionSellItemInfo()
+	--	hookFrame.itemLink = ??? There is no GetAuctionSellItemLink
 	--	return HookSetAuctionSellItem(self)
 	--end
 	-- .SetTradePlayerItem
 	local HookSetTradePlayerItem = GameTooltip.SetTradePlayerItem
 	function GameTooltip.SetTradePlayerItem(self, index)
-		self.itemLink = GetTradePlayerItemLink(index)
+		hookFrame.itemLink = GetTradePlayerItemLink(index)
 		return HookSetTradePlayerItem(self, index)
 	end
 	-- .SetTradeTargetItem
 	local HookSetTradeTargetItem = GameTooltip.SetTradeTargetItem
 	function GameTooltip.SetTradeTargetItem(self, index)
-		self.itemLink = GetTradeTargetItemLink(index)
+		hookFrame.itemLink = GetTradeTargetItemLink(index)
 		return HookSetTradeTargetItem(self, index)
 	end
 end
