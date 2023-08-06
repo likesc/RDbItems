@@ -9,14 +9,27 @@ RDbItems
 
 - 显示物品出售价格（ShaguTweaks，pfUI 或其它插件已经提供了此功能）
 
-  如果你使用了别的插件用于"显示物品价格"，可以运行如下语句
+  如果你使用了别的插件用于"显示物品价格"，可以如下关闭或启用
 
   ```
   # 关闭此插件的 "显示物品价格"
   /run RDbItemsCfg.NoPrice = 1
-  
+
   # 如果你想恢复显示
   /run RDbItemsCfg.NoPrice = nil
+  ```
+
+- 高亮背包中最便宜的垃圾物品，打开背包按下 `Ctrl` 键即可 (注意是灰色的垃圾物品而不是白色物品)
+
+  ```
+  # 如果你不喜欢这个功能，输入以下命令，并重载插件即可关闭这个功能
+  /run RDbItemsCfg.NoCheapest = 1
+
+  # 如果你想恢复"启用"查找最便宜垃圾物品
+  /run RDbItemsCfg.NoCheapest = nil
+
+  # 重载插件
+  /console reloadui
   ```
 
 对于 pfUI 如果你看不见汉字，需要将 `ESC -> pfUI Config -> Setting(默认设置) -> Stand text font(标准字体)` 设为 "ARIALN" 或者 "FRIZQT"
@@ -24,6 +37,7 @@ RDbItems
 ## 更新
 
 2.2.X :
+  添加了查找背包内 "最便宜的垃圾物品"
   修正了 "AtlasLoot 专业技能相关物品" 的显示
 
 2.2.3 :

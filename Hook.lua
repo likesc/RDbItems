@@ -371,6 +371,9 @@ function itemDB.TriStateToggle(rbtn)
 	end
 	StateUpdate(rbtn)
 end
+
+local Cheapest = { time = 0, ctrl = 0 }
+
 function itemDB.Init(rbtn)
 	if pfUI and pfUI.chat then
 		rbtn:DisableDrawLayer("BACKGROUND")
@@ -385,12 +388,16 @@ function itemDB.Init(rbtn)
 	rbtn:SetScript("OnEvent", function()
 		if event == "VARIABLES_LOADED" then
 			if not RDbItemsCfg then RDbItemsCfg = {} end
+			if not RDbItemsCfg.NoCheapest then
+				rbtn:SetScript("OnUpdate", Cheapest.OnUpdate)
+			end
 			StateUpdate(rbtn)
 		end
 	end)
 	HookGameTooltip()
 	rbtn:Show()
 end
+
 --[[
 用于将物品以指定的文字描述发送到聊天窗口,
  - "--"(auto): 直接使用当前客户端语言, 即不进行处理
@@ -399,17 +406,27 @@ end
 
 特性:
  - 支持 shift + 点击 输出到拍卖行, 这将会强制以英文输出, 目前支持 "背包","专业","聊天窗口中链接"
+ - 打开背包按下 ctrl 后将会“高亮”(暗红)最便宜的垃圾物品
 --]]
 
+function Cheapest.OnUpdate()
+	local time = GetTime()
+	if (time - Cheapest.time) < 0.05 then return end -- 20FPS
+	Cheapest.time = time
+	-- MODIFIER_STATE_CHANGED
+	local ctrl = IsControlKeyDown()
+	if ctrl ~= Cheapest.ctrl then
+		if ctrl == 1 then Cheapest:Query() end
+		Cheapest.ctrl = ctrl
+	end
+end
 
---[[
--- 需要 MODIFIER_STATE_CHANGED 事件, "OnUpdate" 损耗似乎有点高
--- 需要一个 item 上的动画
-
-local function SetBagItemGlow(bagId, slot)
+function Cheapest.Flash(self, bagId, slot)
 	local item = nil
 	if IsAddOnLoaded("OneBag3") then
-		item = _G["OneBagFrameBag"..bagId.."Item"..slot]
+		item = getglobal("OneBagFrameBag"..bagId.."Item"..slot)
+	elseif pfUI and pfUI.bags then
+		item = pfUI.bags[bagId].slots[slot].frame
 	else
 		for i = 1, NUM_CONTAINER_FRAMES, 1 do
 			local frame = getglobal("ContainerFrame"..i)
@@ -419,40 +436,34 @@ local function SetBagItemGlow(bagId, slot)
 		end
 	end
 	if item then
-		--item.NewItemTexture:SetAtlas("bags-glow-orange")
-		--item.NewItemTexture:Show()
-		--item.flashAnim:Play()
-		-- item.NormalTexture:Play()
-		-- "NormalTexture"
+		-- TODO: Animation
+		SetItemButtonTextureVertexColor(item, 1, 0, 0) -- #FF0000
 		-- itemDB.trace(tostring(item:GetName()) .. ", bagid: ".. bagId ..", slot: ".. slot)
 	end
 end
-local function GlowCheapestGrey()
+function Cheapest.Query(self)
 	local lastPrice, lastBag, lastSlot
 	for bag = 0, NUM_BAG_SLOTS do
 		for bagSlot = 1, GetContainerNumSlots(bag) do
 			local link = GetContainerItemLink(bag, bagSlot)
-			if link then
-				local type, sid = LinkParse(link)
-				local itemInfo = LoadItemInfo(type, sid)
-				if itemInfo and type == "item" then
-					local _, _, itemRarity = GetItemInfo(tonumber(sid))
-					local vendorPrice = itemInfo[IDX_PRICE]
-					if itemRarity == 0 and vendorPrice > 0 then
-						local _, itemCount = GetContainerItemInfo(bag, bagSlot)
-						local totalVendorPrice = vendorPrice * itemCount
-						if not lastPrice or lastPrice > totalVendorPrice then
-							lastPrice = totalVendorPrice
-							lastBag = bag
-							lastSlot = bagSlot
-						end
+			local type, sid = LinkParse(link or "")
+			local itemInfo = LoadItemInfo(type, sid)
+			if itemInfo and type == "item" then
+				local _, _, itemRarity = GetItemInfo(tonumber(sid))
+				local vendorPrice = itemInfo[IDX_PRICE]
+				if itemRarity == 0 and vendorPrice > 0 then
+					local _, itemCount = GetContainerItemInfo(bag, bagSlot)
+					local totalVendorPrice = vendorPrice * itemCount
+					if not lastPrice or lastPrice > totalVendorPrice then
+						lastPrice = totalVendorPrice
+						lastBag = bag
+						lastSlot = bagSlot
 					end
 				end
 			end
 		end
 	end
 	if lastSlot then
-		SetBagItemGlow(lastBag, lastSlot)
+		self:Flash(lastBag, lastSlot)
 	end
 end
---]]
