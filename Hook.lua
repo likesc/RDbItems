@@ -50,7 +50,7 @@ local function LinkLocale(link, cc)
 end
 
 local function LinkOppoSite(link, cc)
-	if not cc then cc = RDbItemsCC end
+	if not cc then cc = RDbItemsCfg.mode end
 	if OPLANG == IDX_zhCN then -- enUS client
 		if cc == "cn" then
 			link = LinkLocale(link, cc)
@@ -80,7 +80,7 @@ local function AddLocales(tooltip, type, sid, count)
 		tooltip:AddLine(itemInfo[OPLANG])
 	end
 	if not count then count = 1 end
-	if count > 0 and itemInfo[IDX_PRICE] > 0 then
+	if not RDbItemsCfg.NoPrice and count > 0 and itemInfo[IDX_PRICE] > 0 then
 		SetTooltipMoney(tooltip, itemInfo[IDX_PRICE] * count)
 	end
 	tooltip:Show()
@@ -133,8 +133,8 @@ local function HookGameTooltip()
 		if IsShiftKeyDown() then
 			local inf = LoadItemInfo(type, sid)
 			if ChatFrameEditBox:IsVisible() then
-				if inf and RDbItemsCC then
-					local idx = RDbItemsCC == "cn" and IDX_zhCN or IDX_enUS
+				if inf and RDbItemsCfg.mode then
+					local idx = RDbItemsCfg.mode == "cn" and IDX_zhCN or IDX_enUS
 					text = gsub(text, LinkNameRE, "[".. inf[idx] .."]")
 				end
 			elseif BrowseName and BrowseName:IsVisible() then
@@ -270,26 +270,26 @@ end
 
 -- 拍卖行物品
 local Bliz_GetAuctionItemLink = GetAuctionItemLink;
-local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index), RDbItemsCC) end;
+local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index), RDbItemsCfg.mode) end;
 -- 商人
 local Bliz_GetMerchantItemLink = GetMerchantItemLink;
-local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index), RDbItemsCC) end;
+local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index), RDbItemsCfg.mode) end;
 -- 背包物品
 local Bliz_GetContainerItemLink = GetContainerItemLink;
-local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot), RDbItemsCC) end;
+local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot), RDbItemsCfg.mode) end;
 -- 查看装备
 local Bliz_GetInventoryItemLink = GetInventoryItemLink;
-local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot), RDbItemsCC) end;
+local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot), RDbItemsCfg.mode) end;
 -- 商业技能
 local Bliz_GetTradeSkillItemLink = GetTradeSkillItemLink
 local Bliz_GetTradeSkillReagentItemLink = GetTradeSkillReagentItemLink
-local function Trans_GetTradeSkillItemLink(index) return LinkLocale(Bliz_GetTradeSkillItemLink(index), RDbItemsCC) end
-local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(Bliz_GetTradeSkillReagentItemLink(index, id), RDbItemsCC) end
+local function Trans_GetTradeSkillItemLink(index) return LinkLocale(Bliz_GetTradeSkillItemLink(index), RDbItemsCfg.mode) end
+local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(Bliz_GetTradeSkillReagentItemLink(index, id), RDbItemsCfg.mode) end
 -- 附魔
 local Bliz_GetCraftItemLink = GetCraftItemLink
 local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
-local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCC) end;
-local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCC) end;
+local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCfg.mode) end;
+local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCfg.mode) end;
 
 -- 打开拍卖行时 shift 点击背包物品
 local HookContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick
@@ -350,7 +350,7 @@ local function HookGetLocaleItemLink(mode)
 end
 
 local function StateUpdate(rbtn)
-	local mode = RDbItemsCC -- ## SavedVariables
+	local mode = RDbItemsCfg.mode -- ## SavedVariables
 	HookGetLocaleItemLink(mode)
 	if mode == "en" then
 		rbtn:SetText("E")
@@ -362,12 +362,12 @@ local function StateUpdate(rbtn)
 end
 -- global functions
 function itemDB.TriStateToggle(rbtn)
-	if RDbItemsCC == "en" then
-		RDbItemsCC = "cn"
-	elseif RDbItemsCC == "cn" then
-		RDbItemsCC = nil
+	if RDbItemsCfg.mode == "en" then
+		RDbItemsCfg.mode = "cn"
+	elseif RDbItemsCfg.mode == "cn" then
+		RDbItemsCfg.mode = nil
 	else
-		RDbItemsCC = "en"
+		RDbItemsCfg.mode = "en"
 	end
 	StateUpdate(rbtn)
 end
@@ -384,6 +384,7 @@ function itemDB.Init(rbtn)
 	rbtn:RegisterEvent("VARIABLES_LOADED");
 	rbtn:SetScript("OnEvent", function()
 		if event == "VARIABLES_LOADED" then
+			if not RDbItemsCfg then RDbItemsCfg = {} end
 			StateUpdate(rbtn)
 		end
 	end)

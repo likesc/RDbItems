@@ -1,6 +1,6 @@
 ## Interface: 11200
 ## Title: |cFF7A43B6RDbItems|r(中英文物品名显示)
-## SavedVariables: RDbItemsCC
+## SavedVariables: RDbItemsCfg
 ## OptionalDeps: pfQuest, pfUI
 ## Version 2.2.X
 RDbItems.xml
