@@ -384,15 +384,15 @@ function itemDB.Init(rbtn)
 		rbtn:SetHeight(16)
 		rbtn:SetAlpha(0.5)
 	end
-	rbtn:RegisterEvent("VARIABLES_LOADED");
+	rbtn:RegisterEvent("VARIABLES_LOADED")
 	rbtn:SetScript("OnEvent", function()
-		if event == "VARIABLES_LOADED" then
-			if not RDbItemsCfg then RDbItemsCfg = {} end
-			if not RDbItemsCfg.NoCheapest then
-				rbtn:SetScript("OnUpdate", Cheapest.OnUpdate)
-			end
-			StateUpdate(rbtn)
+		if not RDbItemsCfg then RDbItemsCfg = {} end
+		if not RDbItemsCfg.NoCheapest then
+			rbtn:SetScript("OnUpdate", Cheapest.OnUpdate)
 		end
+		StateUpdate(rbtn)
+		rbtn:UnregisterEvent("VARIABLES_LOADED")
+		rbtn:SetScript("OnEvent", nil)
 	end)
 	HookGameTooltip()
 	rbtn:Show()
@@ -422,16 +422,25 @@ function Cheapest.OnUpdate()
 end
 
 function Cheapest.Flash(self, bagId, slot)
-	local item = nil
-	if IsAddOnLoaded("OneBag3") then
-		item = getglobal("OneBagFrameBag"..bagId.."Item"..slot)
-	elseif pfUI and pfUI.bags then
+	local item
+	if pfUI and pfUI.bags then
 		item = pfUI.bags[bagId].slots[slot].frame
+	elseif Bagnon or SUCC_bag then
+		local bagnon = Bagnon or SUCC_bag
+		if not bagnon:IsShown() then return end
+		local index = slot
+		for i = 0, bagId - 1 do
+			index = index + GetContainerNumSlots(i)
+		end
+		item = getglobal(bagnon:GetName() .. "Item" .. index)
+	elseif OneBag then
+		item = OneBag.frame.bags[bagId][slot]
 	else
-		for i = 1, NUM_CONTAINER_FRAMES, 1 do
-			local frame = getglobal("ContainerFrame"..i)
-			if frame:GetID() == bagId and frame:IsShown() then
-				item = getglobal("ContainerFrame"..i.."Item"..(GetContainerNumSlots(bagId) + 1 - slot))
+		for i = 1, NUM_CONTAINER_FRAMES do
+			local frame = getglobal("ContainerFrame".. i)
+			if frame:GetID() == bagId then
+				item = frame:IsShown() and getglobal("ContainerFrame" .. i .."Item" .. (GetContainerNumSlots(bagId) + 1 - slot)) or nil
+				break
 			end
 		end
 	end
@@ -441,6 +450,7 @@ function Cheapest.Flash(self, bagId, slot)
 		-- itemDB.trace(tostring(item:GetName()) .. ", bagid: ".. bagId ..", slot: ".. slot)
 	end
 end
+
 function Cheapest.Query(self)
 	local lastPrice, lastBag, lastSlot
 	for bag = 0, NUM_BAG_SLOTS do
