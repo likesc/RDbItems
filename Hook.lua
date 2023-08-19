@@ -269,17 +269,17 @@ end
 
 
 -- 拍卖行物品
-local Bliz_GetAuctionItemLink = GetAuctionItemLink;
-local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index), RDbItemsCfg.mode) end;
+local Bliz_GetAuctionItemLink = GetAuctionItemLink
+local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index), RDbItemsCfg.mode) end
 -- 商人
-local Bliz_GetMerchantItemLink = GetMerchantItemLink;
-local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index), RDbItemsCfg.mode) end;
+local Bliz_GetMerchantItemLink = GetMerchantItemLink
+local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index), RDbItemsCfg.mode) end
 -- 背包物品
-local Bliz_GetContainerItemLink = GetContainerItemLink;
-local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot), RDbItemsCfg.mode) end;
+local Bliz_GetContainerItemLink = GetContainerItemLink
+local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot), RDbItemsCfg.mode) end
 -- 查看装备
-local Bliz_GetInventoryItemLink = GetInventoryItemLink;
-local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot), RDbItemsCfg.mode) end;
+local Bliz_GetInventoryItemLink = GetInventoryItemLink
+local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot), RDbItemsCfg.mode) end
 -- 商业技能
 local Bliz_GetTradeSkillItemLink = GetTradeSkillItemLink
 local Bliz_GetTradeSkillReagentItemLink = GetTradeSkillReagentItemLink
@@ -288,8 +288,8 @@ local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(B
 -- 附魔
 local Bliz_GetCraftItemLink = GetCraftItemLink
 local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
-local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCfg.mode) end;
-local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCfg.mode) end;
+local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCfg.mode) end
+local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCfg.mode) end
 --  Loot
 local Bliz_GetLootSlotLink = GetLootSlotLink
 local function Trans_GetLootSlotLink(slot) return LinkLocale(Bliz_GetLootSlotLink(slot), RDbItemsCfg.mode) end
