@@ -290,6 +290,9 @@ local Bliz_GetCraftItemLink = GetCraftItemLink
 local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
 local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCfg.mode) end;
 local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCfg.mode) end;
+--  Loot
+local Bliz_GetLootSlotLink = GetLootSlotLink
+local function Trans_GetLootSlotLink(slot) return LinkLocale(Bliz_GetLootSlotLink(slot), RDbItemsCfg.mode) end
 
 -- 打开拍卖行时 shift 点击背包物品
 local HookContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick
@@ -333,6 +336,7 @@ local function HookGetLocaleItemLink(mode)
 		GetTradeSkillReagentItemLink = Trans_GetTradeSkillReagentItemLink
 		GetCraftReagentItemLink = Trans_GetCraftReagentItemLink
 		GetCraftItemLink = Trans_GetCraftItemLink
+		GetLootSlotLink = Trans_GetLootSlotLink
 		if pfDB then
 			pfQuestLocale = mode == "cn" and pfDB["quests"]["zhCN"] or pfDB["quests"]["enUS"]
 		end
@@ -345,6 +349,7 @@ local function HookGetLocaleItemLink(mode)
 		GetTradeSkillReagentItemLink = Bliz_GetTradeSkillReagentItemLink
 		GetCraftReagentItemLink = Bliz_GetCraftReagentItemLink
 		GetCraftItemLink = Bliz_GetCraftItemLink
+		GetLootSlotLink = Bliz_GetLootSlotLink
 		pfQuestLocale = pfQuestOrigin
 	end
 end
