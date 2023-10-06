@@ -3,29 +3,37 @@ RDbItems
 
 只适合于 WOW 1.12 版本，数据提取自以前 N 服 MySql，因此没有 Turtle Wow 的新物品数据。
 
-- 显示物品相对应的中/英文名称，和物品等级
+- 在 GameTooltip 上显示物品相对应的中/英文名称
+
+  ```
+  # 关闭
+  /run RDbItemsCfg.NoName = 1
+
+  # 开启(默认)
+  /run RDbItemsCfg.NoName = nil
+  ```
 
 - 当`shift + 点击` 物品或任务（依赖pfQuest）时可选择中文或英文标题
 
-- 显示物品出售价格（ShaguTweaks，pfUI 或其它插件已经提供了此功能）
+- 在 GameTooltip 上显示物品出售价格(ShaguTweaks, pfUI 或其它插件已经提供了此功能), 和物品等级
 
-  如果你使用了别的插件用于"显示物品价格"，可以如下关闭或启用
+  如果你使用了别的同类型插件, 可以如下关闭或启用
 
   ```
-  # 关闭此插件的 "显示物品价格"
+  # 关闭
   /run RDbItemsCfg.NoPrice = 1
 
-  # 如果你想恢复显示
+  # 开启(默认)
   /run RDbItemsCfg.NoPrice = nil
   ```
 
 - 高亮背包中最便宜的垃圾物品，打开背包按下 `Ctrl` 键即可 (注意是灰色的垃圾物品而不是白色物品)
 
   ```
-  # 如果你不喜欢这个功能，输入以下命令，并重载插件即可关闭这个功能
+  # 关闭, 需要重载插件
   /run RDbItemsCfg.NoCheapest = 1
 
-  # 如果你想恢复"启用"查找最便宜垃圾物品
+  # 开启(默认), 需要重载插件
   /run RDbItemsCfg.NoCheapest = nil
 
   # 重载插件

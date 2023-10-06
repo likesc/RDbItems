@@ -14,9 +14,9 @@ local LinkNameRE = "%[([^%]]+)%]"
 local OPLANG = GetLocale() == "enUS" and IDX_zhCN or IDX_enUS
 
 function itemDB.trace(...)
-	local str = ">>>"
-	for _, v in ipairs(arg) do
-		str = str .. "  " .. tostring(v)
+	local str = ""
+	for i = 1, arg.n do
+		str = i == 1 and tostring(arg[i]) or (str .. ", " .. tostring(arg[i]))
 	end
 	DEFAULT_CHAT_FRAME:AddMessage(str)
 end
@@ -34,31 +34,15 @@ local function LinkParse(link)
 	return type, sid
 end
 
-local function LinkLocale(link, cc)
-	local idx = IDX_zhCN
-	if cc == "en" then
-		idx = IDX_enUS
-	end
-	if not cc or not link then
+local function LinkLocale(link, mode)
+	if not mode then mode = RDbItemsCfg.mode end
+	if not mode or not link then
 		return link
 	end
+	local idx = mode == "en" and IDX_enUS or IDX_zhCN
 	local itemInfo = LoadItemInfo(LinkParse(link))
 	if itemInfo then
 		link = gsub(link, LinkNameRE, "[".. itemInfo[idx] .."]")
-	end
-	return link
-end
-
-local function LinkOppoSite(link, cc)
-	if not cc then cc = RDbItemsCfg.mode end
-	if OPLANG == IDX_zhCN then -- enUS client
-		if cc == "cn" then
-			link = LinkLocale(link, cc)
-		end
-	else
-		if cc == "en" then
-			link = LinkLocale(link, cc)
-		end
 	end
 	return link
 end
@@ -74,14 +58,21 @@ local function AddLocales(tooltip, type, sid, count)
 		return
 	end
 	local lv = itemInfo[IDX_LV]
-	if lv > 1 then
-		tooltip:AddDoubleLine(itemInfo[OPLANG], "|cff777777Lv|r|cffffffff".. lv .. "|r")
-	else
+	if not RDbItemsCfg.NoName then
 		tooltip:AddLine(itemInfo[OPLANG])
 	end
 	if not count then count = 1 end
 	if not RDbItemsCfg.NoPrice and count > 0 and itemInfo[IDX_PRICE] > 0 then
 		SetTooltipMoney(tooltip, itemInfo[IDX_PRICE] * count)
+	end
+	local right = getglobal(tooltip:GetName().."TextRight".. tooltip:NumLines())
+	if not RDbItemsCfg.NoPrice and lv > 1 and right and not right:IsVisible() then
+		right:SetText("|cffddddddLv|r".. lv)
+		right:Show()
+		local moneyFrame = getglobal(tooltip:GetName().."MoneyFrame")
+		if moneyFrame and moneyFrame:IsVisible() then
+			tooltip:SetMinimumWidth(moneyFrame:GetWidth() + right:GetWidth() + 12)
+		end
 	end
 	tooltip:Show()
 end
@@ -270,29 +261,29 @@ end
 
 -- 拍卖行物品
 local Bliz_GetAuctionItemLink = GetAuctionItemLink
-local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index), RDbItemsCfg.mode) end
+local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index)) end
 -- 商人
 local Bliz_GetMerchantItemLink = GetMerchantItemLink
-local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index), RDbItemsCfg.mode) end
+local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index)) end
 -- 背包物品
 local Bliz_GetContainerItemLink = GetContainerItemLink
-local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot), RDbItemsCfg.mode) end
+local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot)) end
 -- 查看装备
 local Bliz_GetInventoryItemLink = GetInventoryItemLink
-local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot), RDbItemsCfg.mode) end
+local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot)) end
 -- 商业技能
 local Bliz_GetTradeSkillItemLink = GetTradeSkillItemLink
 local Bliz_GetTradeSkillReagentItemLink = GetTradeSkillReagentItemLink
-local function Trans_GetTradeSkillItemLink(index) return LinkLocale(Bliz_GetTradeSkillItemLink(index), RDbItemsCfg.mode) end
-local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(Bliz_GetTradeSkillReagentItemLink(index, id), RDbItemsCfg.mode) end
+local function Trans_GetTradeSkillItemLink(index) return LinkLocale(Bliz_GetTradeSkillItemLink(index)) end
+local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(Bliz_GetTradeSkillReagentItemLink(index, id)) end
 -- 附魔
 local Bliz_GetCraftItemLink = GetCraftItemLink
 local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
-local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index), RDbItemsCfg.mode) end
-local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id), RDbItemsCfg.mode) end
+local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index)) end
+local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id)) end
 --  Loot
 local Bliz_GetLootSlotLink = GetLootSlotLink
-local function Trans_GetLootSlotLink(slot) return LinkLocale(Bliz_GetLootSlotLink(slot), RDbItemsCfg.mode) end
+local function Trans_GetLootSlotLink(slot) return LinkLocale(Bliz_GetLootSlotLink(slot)) end
 
 -- 打开拍卖行时 shift 点击背包物品
 local HookContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick
