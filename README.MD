@@ -3,6 +3,14 @@ RDbItems
 
 只适合于 WOW 1.12 版本，数据提取自以前 N 服 MySql，因此没有 Turtle Wow 的新物品数据。
 
+## 安装
+
+1. 首先下载 [RDbItems-master](https://github.com/likesc/RDbItems/archive/refs/heads/master.zip), 如果是乌龟服(turtle)则下载 [RDbItems-turtle](https://github.com/likesc/RDbItems/archive/refs/heads/turtle.zip)
+2. 之后解压到 `Interface\AddOns` 目录下,
+3. 把解压后的文件夹名更改为 `RDbItems` 即可
+
+## 设置
+
 - 在 GameTooltip 上显示物品相对应的中/英文名称
 
   ```
