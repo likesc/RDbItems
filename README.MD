@@ -1,13 +1,17 @@
 RDbItems
 ===========
 
-只适合于 WOW 1.12 版本，数据提取自以前 N 服 MySql，因此没有 Turtle Wow 的新物品数据。
+WOW 1.12 版本的数据提取自以前 N 服 MySql，Turtle Wow 的数据来自于脚本的提取
 
 ## 安装
 
-1. 首先下载 [RDbItems-master](https://github.com/likesc/RDbItems/archive/refs/heads/master.zip), 如果是乌龟服(turtle)则下载 [RDbItems-turtle](https://github.com/likesc/RDbItems/archive/refs/heads/turtle.zip)
+1. 普通 1.12 下载 [RDbItems-master](https://github.com/likesc/RDbItems/archive/refs/heads/master.zip), 如果是乌龟服(turtle)则下载 [RDbItems-turtle](https://github.com/likesc/RDbItems/archive/refs/heads/turtle.zip)
 2. 之后解压到 `Interface\AddOns` 目录下,
 3. 把解压后的文件夹名更改为 `RDbItems` 即可
+
+### 乌龟服数据说明
+
+乌龟服数据来源于对 pfQuest-turtle 的提取, 而且有一个 BUG 就是无法识别幻化过的装备, 这是因为幻化过的装备使用了新的“物品ID”值
 
 ## 设置
 
