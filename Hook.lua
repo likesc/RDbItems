@@ -185,6 +185,7 @@ local function HookGameTooltip()
 	local HookSetInventoryItem = GameTooltip.SetInventoryItem
 	function GameTooltip.SetInventoryItem(self, unit, slot)
 		hookFrame.itemLink = GetInventoryItemLink(unit, slot)
+		hookFrame.itemCount = GetInventoryItemCount(unit, slot)
 		return HookSetInventoryItem(self, unit, slot)
 	end
 	-- .SetLootRollItem
