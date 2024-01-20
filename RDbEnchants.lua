@@ -155,4 +155,18 @@ RDbItems.enchant = {
 	{25129, "Brilliant Wizard Oil", "卓越巫师之油"},
 	{25130, "Brilliant Mana Oil", "卓越法力之油"},
 	{27837, "Enchant 2H Weapon - Agility", "附魔双手武器 - 敏捷"},
+----->>
+	{46086, "Enchant Gloves - Major Strength", "附魔手套 - 主要力量"},
+	{46601, "Enchant Gloves - Arcane Power", "附魔手套 - 奥术能量"},
+	{46602, "Enchant Gloves - Nature Power", "附魔手套 - 自然之力"},
+	{57028, "Enchant Bracer - Spell Power", "附魔护腕 - 法术强度"},
+	{57030, "Enchant Bracer - Greater Agility", "附魔护腕 - 强效敏捷"},
+	{57117, "Enchant Cloak - Greater Arcane Resistance", "附魔披风 - 强效奥数抗性"},
+	{57119, "Enchant Chest - Mighty Mana", "附魔胸甲 - 强大法力"},
+	{57142, "Enchant Boots - Greater Spirit", "附魔靴子 - 强效精神"},
+	{57144, "Enchant Bracer - Greater Deflection", "附魔护腕 - 强效偏转"},
+	{57146, "Enchant Bracer - Vampirism", "附魔护腕 - 吸血鬼"},
+	{57148, "Enchant Boots - Vampirism", "附魔靴子 - 吸血鬼"},
+	{57518, "Eternal Dreamstone Shard", "永恒梦石碎片"},
+----->>
 }

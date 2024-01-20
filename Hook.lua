@@ -115,7 +115,7 @@ end
 local function add_locales(tooltip, type, sid, count)
 	local data = load_itemdata(type, sid)
 	if not data then
-		return
+		return 1 -- NOT_FOUND, try load_of_name() to resolve it
 	end
 	local show_name = not RDbItemsCfg.NoName
 	if show_name then
@@ -165,7 +165,14 @@ local function HookGameTooltip()
 			return
 		end
 		local type, sid = link_parse(hookFrame.itemLink)
-		add_locales(GameTooltip, type, sid, hookFrame.itemCount)
+		if add_locales(GameTooltip, type, sid, hookFrame.itemCount) and type == "item" then -- if NOT_FOUND
+			local _, _, name = string.find(hookFrame.itemLink, link_name_rex)
+			local data = name and load_of_name(name)
+			if data then
+				-- itemDB.trace(string.format("id : %s, origin : %d, name : %s", sid, data[IDX_ID], name))
+				add_locales(GameTooltip, type, data[IDX_ID], hookFrame.itemCount)
+			end
+		end
 	end)
 	if AtlasLootItem_OnEnter then
 		-- AtlasLoot\Core\AtlasLoot.lua "AtlasLootItem_OnEnter()"
