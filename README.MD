@@ -5,8 +5,11 @@ WOW 1.12 版本的数据提取自以前 N 服 MySql，Turtle Wow 的数据来自
 
 ## 安装
 
-1. 普通 1.12 下载 [RDbItems-master](https://github.com/likesc/RDbItems/archive/refs/heads/master.zip), 如果是乌龟服(turtle)则下载 [RDbItems-turtle](https://github.com/likesc/RDbItems/archive/refs/heads/turtle.zip)
+1. 普通 1.12 单独下载 [RDbItems-master](https://github.com/likesc/RDbItems/archive/refs/heads/master.zip),
+如果是乌龟服(turtle)只要单独下载 [RDbItems-turtle](https://github.com/likesc/RDbItems/archive/refs/heads/turtle.zip) 即可
+
 2. 之后解压到 `Interface\AddOns` 目录下,
+
 3. 把解压后的文件夹名更改为 `RDbItems` 即可
 
 ### 乌龟服数据说明
@@ -55,6 +58,11 @@ WOW 1.12 版本的数据提取自以前 N 服 MySql，Turtle Wow 的数据来自
 对于 pfUI 如果你看不见汉字，需要将 `ESC -> pfUI Config -> Setting(默认设置) -> Stand text font(标准字体)` 设为 "ARIALN" 或者 "FRIZQT"
 
 ## 更新
+
+**2.3.0** : **重要** : 这是一个破坏性更新, 如果你写的插件引用了这个插件的数据,
+那么请参考一下 `Hook.lua` 下的 `load_itemdata()/RDbItems.get()` 是如何获取数据的
+  - 使用"排序数组"的形式保存数据, 理论上会更节省内存, 由于数据是固定不变的因此可以很方便地为 "名字" 创建搜索索引
+  - 乌龟服幻化了的装备将会尝试使用搜索其名字的方式来解决, 由于创建了"搜索索引", 因此搜索的时间复杂度优化到了 `LOG2(N)`
 
 2.2.X :
   - 添加了查找背包内 "最便宜的垃圾物品", 目前仅可用于：原始背包, pfUI, Bagnon, OneBag, SUCC_bag(未测试)

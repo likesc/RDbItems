@@ -1,17 +1,8 @@
 -- global
-local itemDB = {}
+if RDbItems then return end
+
+local itemDB = { version = 20300 } -- 2.3.0
 RDbItems = itemDB
-
--- [25] = {"Worn Shortsword", "破损的短剑", 2, 7},
-local IDX_enUS = 1
-local IDX_zhCN = 2
-local IDX_LV = 3
-local IDX_PRICE = 4
--- regexp
-local LinkNameRE = "%[([^%]]+)%]"
-
--- Opposite language
-local OPLANG = GetLocale() == "enUS" and IDX_zhCN or IDX_enUS
 
 function itemDB.trace(...)
 	local str = ""
@@ -21,49 +12,124 @@ function itemDB.trace(...)
 	DEFAULT_CHAT_FRAME:AddMessage(str)
 end
 
-local function LoadItemInfo(type, sid)
-	local tab = itemDB[type]
-	return tab and tab[tonumber(sid)] or nil
+local function mkindex(list, column)
+	local indexes = {}
+	local len = table.getn(list) -- lua 5.0
+	table.setn(indexes, len)
+	for i = 1, len do
+		indexes[i] = i
+	end
+	table.sort(indexes, function(a, b)
+		return list[a][column] < list[b][column]
+	end)
+	return indexes
 end
+
+local function bsearch(list, column, value, first, last)
+	if not value or first > last then
+		return nil
+	end
+	local midd = bit.rshift(first + last, 1)
+	local data = list[midd]
+	local mono = data[column]
+	if mono == value then
+		return data
+	elseif mono < value then
+		return bsearch(list, column, value, midd + 1, last)
+	else
+		return bsearch(list, column, value, first, midd - 1)
+	end
+end
+
+local function bsearch_index(list, indexes, column, value, first, last)
+	if not value or first > last then
+		return nil
+	end
+	local midd = bit.rshift(first + last, 1)
+	local data = list[indexes[midd]]
+	local mono = data[column]
+	if mono == value then
+		return data
+	elseif mono < value then
+		return bsearch_index(list, indexes, column, value, midd + 1, last)
+	else
+		return bsearch_index(list, indexes, column, value, first, midd - 1)
+	end
+end
+
+-- column, e.g : {25, "Worn Shortsword", "破损的短剑", 2, 7},
+local IDX_ID    = 1
+local IDX_enUS  = 2
+local IDX_zhCN  = 3
+local IDX_LV    = 4
+local IDX_PRICE = 5
+
+-- lang and Opposite lang
+local LANG = GetLocale() == "zhCN" and IDX_zhCN or IDX_enUS
+local OPLANG = LANG == IDX_zhCN and IDX_enUS or IDX_zhCN
+
+function load_of_name(name, list)
+	if not list then
+		list = itemDB.item
+	end
+	local indexes = list[0]
+	if not indexes then
+		indexes = mkindex(list, LANG)
+		list[0] = indexes
+	end
+	return bsearch_index(list, indexes, LANG, name, 1, table.getn(indexes))
+end
+
+-- regexp
+local link_name_rex = "%[([^%]]+)%]"
+local link_type_id_rex = "|H(%l+):(%d+)"
+
+local function load_itemdata(type, sid)
+	local list = itemDB[type]
+	return list and bsearch(list, 1, tonumber(sid), 1, table.getn(list))
+end
+
+itemDB.get = load_itemdata
+itemDB.ofname = load_of_name
 
 -- item:6948:0:0:0
 -- |Hitem:7073:0:0:0:0:0:0:0:80:0:0:0:0|h
 -- |Henchant:59387|h
-local function LinkParse(link)
-	local _, _, type, sid = string.find(link, "|H(%l+):(%d+)")
+local function link_parse(link)
+	local _, _, type, sid = string.find(link, link_type_id_rex)
 	return type, sid
 end
 
-local function LinkLocale(link, mode)
+local function link_locale(link, mode)
 	if not mode then mode = RDbItemsCfg.mode end
 	if not mode or not link then
 		return link
 	end
 	local idx = mode == "en" and IDX_enUS or IDX_zhCN
-	local itemInfo = LoadItemInfo(LinkParse(link))
-	if itemInfo then
-		link = gsub(link, LinkNameRE, "[".. itemInfo[idx] .."]")
+	local data = load_itemdata(link_parse(link))
+	if data then
+		link = gsub(link, link_name_rex, "[".. data[idx] .."]")
 	end
 	return link
 end
 
-local function AddLocales(tooltip, type, sid, count)
-	local itemInfo = LoadItemInfo(type, sid)
-	if not itemInfo then
+local function add_locales(tooltip, type, sid, count)
+	local data = load_itemdata(type, sid)
+	if not data then
 		return
 	end
 	if type ~= "item" then
-		tooltip:AddLine(itemInfo[OPLANG])
+		tooltip:AddLine(data[OPLANG])
 		tooltip:Show()
 		return
 	end
-	local lv = itemInfo[IDX_LV]
+	local lv = data[IDX_LV]
 	if not RDbItemsCfg.NoName then
-		tooltip:AddLine(itemInfo[OPLANG])
+		tooltip:AddLine(data[OPLANG])
 	end
 	if not count then count = 1 end
-	if not RDbItemsCfg.NoPrice and count > 0 and itemInfo[IDX_PRICE] > 0 then
-		SetTooltipMoney(tooltip, itemInfo[IDX_PRICE] * count)
+	if not RDbItemsCfg.NoPrice and count > 0 and data[IDX_PRICE] > 0 then
+		SetTooltipMoney(tooltip, data[IDX_PRICE] * count)
 	end
 	local right = getglobal(tooltip:GetName().."TextRight".. tooltip:NumLines())
 	if not RDbItemsCfg.NoPrice and lv > 1 and right and not right:IsVisible() then
@@ -88,8 +154,8 @@ local function HookGameTooltip()
 		if not hookFrame.itemLink then
 			return
 		end
-		local type, sid = LinkParse(hookFrame.itemLink)
-		AddLocales(GameTooltip, type, sid, hookFrame.itemCount)
+		local type, sid = link_parse(hookFrame.itemLink)
+		add_locales(GameTooltip, type, sid, hookFrame.itemCount)
 	end)
 	if AtlasLootItem_OnEnter then
 		-- AtlasLoot\Core\AtlasLoot.lua "AtlasLootItem_OnEnter()"
@@ -110,37 +176,37 @@ local function HookGameTooltip()
 				sid = GetSpellInfoVanillaDB["craftspells"][tonumber(string.sub(sid, 2))]["craftItem"]
 				tooltip = AtlasLootTooltip2
 			end
-			AddLocales(tooltip, type, sid)
+			add_locales(tooltip, type, sid)
 		end
 	end
 	-- SetItemRef, Called to handle clicks on Blizzard hyperlinks in chat
 	local HookSetItemRef = SetItemRef
 	SetItemRef = function(link, text, button)
-		local type, sid = LinkParse(text)
+		local type, sid = link_parse(text)
 		if not sid then
 			HookSetItemRef(link, text, button)
 			return
 		end
 		if IsShiftKeyDown() then
-			local inf = LoadItemInfo(type, sid)
+			local data = load_itemdata(type, sid)
 			if ChatFrameEditBox:IsVisible() then
-				if inf and RDbItemsCfg.mode then
+				if data and RDbItemsCfg.mode then
 					local idx = RDbItemsCfg.mode == "cn" and IDX_zhCN or IDX_enUS
-					text = gsub(text, LinkNameRE, "[".. inf[idx] .."]")
+					text = gsub(text, link_name_rex, "[".. data[idx] .."]")
 				end
 			elseif BrowseName and BrowseName:IsVisible() then
-				if inf then
+				if data then
 					local idx = OPLANG == IDX_zhCN and IDX_enUS or IDX_zhCN
-					BrowseName:SetText(inf[idx])
+					BrowseName:SetText(data[idx])
 				else
-					local _, _, name = string.find(text, LinkNameRE)
+					local _, _, name = string.find(text, link_name_rex)
 					BrowseName:SetText(name)
 				end
 			end
 		end
 		HookSetItemRef(link, text, button)
 		if not IsAltKeyDown() and not IsShiftKeyDown() and not IsControlKeyDown() then
-			AddLocales(ItemRefTooltip, type, sid)
+			add_locales(ItemRefTooltip, type, sid)
 		end
 	end
 	-- .SetBagItem
@@ -175,12 +241,16 @@ local function HookGameTooltip()
 		HookSetLootItem(self, slot)
 	end
 	-- .SetInboxItem
-	--local HookSetInboxItem = GameTooltip.SetInboxItem
-	--function GameTooltip.SetInboxItem(self, mailID, attachmentIndex)
-	--	var name, _, count = GetInboxItem(mailID)
-	--	-- there is no GetInboxItemLink
-	--	return HookSetInboxItem(self, mailID, attachmentIndex)
-	--end
+	local HookSetInboxItem = GameTooltip.SetInboxItem
+	function GameTooltip.SetInboxItem(self, mailID, attachmentIndex)
+		local name, _, count = GetInboxItem(mailID) -- there is no GetInboxItemLink
+		local data = load_of_name(name)
+		if data then
+			hookFrame.itemLink = "|Hitem:" .. data[IDX_ID]
+			hookFrame.itemCount = count
+		end
+		return HookSetInboxItem(self, mailID, attachmentIndex)
+	end
 	-- .SetInventoryItem
 	local HookSetInventoryItem = GameTooltip.SetInventoryItem
 	function GameTooltip.SetInventoryItem(self, unit, slot)
@@ -201,13 +271,17 @@ local function HookGameTooltip()
 		hookFrame.itemCount = 0 -- 0 means don't show addon price
 		return HookSetMerchantItem(self, index)
 	end
-	-- .SetBuybackItem, TODO
-	--local HookSetBuybackItem = GameTooltip.SetBuybackItem
-	--function GameTooltip.SetBuybackItem(self, index)
-	--	hookFrame.itemLink = ???(index)
-	--	hookFrame.itemCount = 0 -- 0 means don't show addon price
-	--	return HookSetBuybackItem(self, index)
-	--end
+	-- .SetBuybackItem
+	local HookSetBuybackItem = GameTooltip.SetBuybackItem
+	function GameTooltip.SetBuybackItem(self, index)
+		local name = GetBuybackItemInfo(index)
+		local data = load_of_name(name)
+		if data then
+			hookFrame.itemLink = "|Hitem:" .. data[IDX_ID]
+			hookFrame.itemCount = 0 -- 0 means don't show addon price
+		end
+		return HookSetBuybackItem(self, index)
+	end
 	-- .SetCraftItem
 	local HookSetCraftItem = GameTooltip.SetCraftItem
 	function GameTooltip.SetCraftItem(self, skill, slot)
@@ -239,12 +313,16 @@ local function HookGameTooltip()
 		return HookSetAuctionItem(self, atype, index)
 	end
 	-- .SetAuctionSellItem
-	--local HookSetAuctionSellItem = GameTooltip.SetAuctionSellItem
-	--function GameTooltip.SetAuctionSellItem(self)
-	--	_, _, hookFrame.itemCount = GetAuctionSellItemInfo()
-	--	hookFrame.itemLink = ??? There is no GetAuctionSellItemLink
-	--	return HookSetAuctionSellItem(self)
-	--end
+	local HookSetAuctionSellItem = GameTooltip.SetAuctionSellItem
+	function GameTooltip.SetAuctionSellItem(self)
+		local name, _, count = GetAuctionSellItemInfo() -- There is no GetAuctionSellItemLink
+		local data = load_of_name(name)
+		if data then
+			hookFrame.itemLink = "|Hitem:" .. data[IDX_ID]
+			hookFrame.itemCount = count
+		end
+		return HookSetAuctionSellItem(self)
+	end
 	-- .SetTradePlayerItem
 	local HookSetTradePlayerItem = GameTooltip.SetTradePlayerItem
 	function GameTooltip.SetTradePlayerItem(self, index)
@@ -262,36 +340,36 @@ end
 
 -- 拍卖行物品
 local Bliz_GetAuctionItemLink = GetAuctionItemLink
-local function Trans_GetAuctionItemLink(ty, index) return LinkLocale(Bliz_GetAuctionItemLink(ty, index)) end
+local function Trans_GetAuctionItemLink(ty, index) return link_locale(Bliz_GetAuctionItemLink(ty, index)) end
 -- 商人
 local Bliz_GetMerchantItemLink = GetMerchantItemLink
-local function Trans_GetMerchantItemLink(index) return LinkLocale(Bliz_GetMerchantItemLink(index)) end
+local function Trans_GetMerchantItemLink(index) return link_locale(Bliz_GetMerchantItemLink(index)) end
 -- 背包物品
 local Bliz_GetContainerItemLink = GetContainerItemLink
-local function Trans_GetContainerItemLink(bag, slot) return LinkLocale(Bliz_GetContainerItemLink(bag, slot)) end
+local function Trans_GetContainerItemLink(bag, slot) return link_locale(Bliz_GetContainerItemLink(bag, slot)) end
 -- 查看装备
 local Bliz_GetInventoryItemLink = GetInventoryItemLink
-local function Trans_GetInventoryItemLink(unit, slot) return LinkLocale(Bliz_GetInventoryItemLink(unit, slot)) end
+local function Trans_GetInventoryItemLink(unit, slot) return link_locale(Bliz_GetInventoryItemLink(unit, slot)) end
 -- 商业技能
 local Bliz_GetTradeSkillItemLink = GetTradeSkillItemLink
 local Bliz_GetTradeSkillReagentItemLink = GetTradeSkillReagentItemLink
-local function Trans_GetTradeSkillItemLink(index) return LinkLocale(Bliz_GetTradeSkillItemLink(index)) end
-local function Trans_GetTradeSkillReagentItemLink(index, id) return LinkLocale(Bliz_GetTradeSkillReagentItemLink(index, id)) end
+local function Trans_GetTradeSkillItemLink(index) return link_locale(Bliz_GetTradeSkillItemLink(index)) end
+local function Trans_GetTradeSkillReagentItemLink(index, id) return link_locale(Bliz_GetTradeSkillReagentItemLink(index, id)) end
 -- 附魔
 local Bliz_GetCraftItemLink = GetCraftItemLink
 local Bliz_GetCraftReagentItemLink = GetCraftReagentItemLink
-local function Trans_GetCraftItemLink(index) return LinkLocale(Bliz_GetCraftItemLink(index)) end
-local function Trans_GetCraftReagentItemLink(index, id) return LinkLocale(Bliz_GetCraftReagentItemLink(index, id)) end
+local function Trans_GetCraftItemLink(index) return link_locale(Bliz_GetCraftItemLink(index)) end
+local function Trans_GetCraftReagentItemLink(index, id) return link_locale(Bliz_GetCraftReagentItemLink(index, id)) end
 --  Loot
 local Bliz_GetLootSlotLink = GetLootSlotLink
-local function Trans_GetLootSlotLink(slot) return LinkLocale(Bliz_GetLootSlotLink(slot)) end
+local function Trans_GetLootSlotLink(slot) return link_locale(Bliz_GetLootSlotLink(slot)) end
 
 -- 打开拍卖行时 shift 点击背包物品
 local HookContainerFrameItemButton_OnClick = ContainerFrameItemButton_OnClick
 ContainerFrameItemButton_OnClick = function(button, ignoreShift)
 	if IsShiftKeyDown() and not IsControlKeyDown() and not ignoreShift and not ChatFrameEditBox:IsVisible() and BrowseName and BrowseName:IsVisible() then
 		local link = Bliz_GetContainerItemLink(this:GetParent():GetID(), this:GetID())
-		local _, _, name = string.find(link, LinkNameRE)
+		local _, _, name = string.find(link, link_name_rex)
 		BrowseName:SetText(name)
 	else
 		HookContainerFrameItemButton_OnClick(button, ignoreShift)
@@ -408,7 +486,7 @@ end
 
 function Cheapest.OnUpdate()
 	local time = GetTime()
-	if (time - Cheapest.time) < 0.05 then return end -- 20FPS
+	if (time - Cheapest.time) < 0.1 then return end -- 10FPS
 	Cheapest.time = time
 	-- MODIFIER_STATE_CHANGED
 	local ctrl = IsControlKeyDown()
@@ -453,11 +531,11 @@ function Cheapest.Query(self)
 	for bag = 0, NUM_BAG_SLOTS do
 		for bagSlot = 1, GetContainerNumSlots(bag) do
 			local link = GetContainerItemLink(bag, bagSlot)
-			local type, sid = LinkParse(link or "")
-			local itemInfo = LoadItemInfo(type, sid)
-			if itemInfo and type == "item" then
+			local type, sid = link_parse(link or "")
+			local data = load_itemdata(type, sid)
+			if data and type == "item" then
 				local _, _, itemRarity = GetItemInfo(tonumber(sid))
-				local vendorPrice = itemInfo[IDX_PRICE]
+				local vendorPrice = data[IDX_PRICE]
 				if itemRarity == 0 and vendorPrice > 0 then
 					local _, itemCount = GetContainerItemInfo(bag, bagSlot)
 					local totalVendorPrice = vendorPrice * itemCount
