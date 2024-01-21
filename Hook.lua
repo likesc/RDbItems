@@ -72,10 +72,10 @@ function load_of_name(name, list)
 	end
 	local indexes = list[0]
 	if not indexes then
-		indexes = mkindex(list, LANG)
+		indexes = mkindex(list, IDX_enUS) -- aways use the enUS for searching
 		list[0] = indexes
 	end
-	return name and bsearch_index(list, indexes, LANG, name, 1, table.getn(indexes))
+	return name and bsearch_index(list, indexes, IDX_enUS, name, 1, table.getn(indexes))
 end
 
 -- regexp
@@ -105,14 +105,19 @@ local function link_locale(link, mode)
 		return link
 	end
 	local idx = mode == "en" and IDX_enUS or IDX_zhCN
-	local data = load_itemdata(link_parse(link))
+	local type, sid = link_parse(link)
+	local data = load_itemdata(type, sid)
+	if not data and type == "item" then
+		local _, _, name = string.find(link, link_name_rex)
+		data = name and load_of_name(name)
+	end
 	if data then
 		link = gsub(link, link_name_rex, "[".. data[idx] .."]")
 	end
 	return link
 end
 
-local function add_locales(tooltip, type, sid, count)
+local function add_locales(tooltip, type, sid, count, mog)
 	local data = load_itemdata(type, sid)
 	if not data then
 		return 1 -- NOT_FOUND, try load_of_name() to resolve it
@@ -124,7 +129,7 @@ local function add_locales(tooltip, type, sid, count)
 	end
 	local lv = data[IDX_LV]
 	if not RDbItemsCfg.NoName then
-		tooltip:AddLine(data[OPLANG])
+		tooltip:AddLine(data[mog or OPLANG])
 	end
 	if not count then count = 1 end
 	if not RDbItemsCfg.NoPrice and count > 0 and data[IDX_PRICE] > 0 then
@@ -154,13 +159,16 @@ local function HookGameTooltip()
 			return
 		end
 		local type, sid = link_parse(hookFrame.itemLink)
-		if add_locales(GameTooltip, type, sid, hookFrame.itemCount) and type == "item" then -- if NOT_FOUND
-			local _, _, name = string.find(hookFrame.itemLink, link_name_rex)
-			local data = name and load_of_name(name)
-			if data then
-				-- itemDB.trace(string.format("id : %s, origin : %d, name : %s", sid, data[IDX_ID], name))
-				add_locales(GameTooltip, type, data[IDX_ID], hookFrame.itemCount)
-			end
+		if not (add_locales(GameTooltip, type, sid, hookFrame.itemCount) and type == "item") then -- if NOT_FOUND
+			return
+		end
+		local _, _, name = string.find(hookFrame.itemLink, link_name_rex)
+		if RDbItemsCfg.mode ~= "cn" then
+			local data = load_of_name(name)
+			add_locales(GameTooltip, type, data and data[IDX_ID] , hookFrame.itemCount, IDX_zhCN)
+		else
+			GameTooltip:AddLine(name)
+			GameTooltip:Show()
 		end
 	end)
 	if AtlasLootItem_OnEnter then
@@ -403,7 +411,7 @@ if pfDB then
 end
 
 local function HookGetLocaleItemLink(mode)
-	if mode and ((mode == "cn" and OPLANG == IDX_zhCN) or (mode == "en" and OPLANG == IDX_enUS)) then
+	if mode then
 		GetAuctionItemLink = Trans_GetAuctionItemLink
 		GetMerchantItemLink = Trans_GetMerchantItemLink
 		GetContainerItemLink = Trans_GetContainerItemLink
