@@ -72,8 +72,21 @@ function load_of_name(name, list)
 	end
 	local indexes = list[0]
 	if not indexes then
-		indexes = mkindex(list, IDX_enUS) -- aways use the enUS for searching
+		indexes = mkindex(list, LANG)
 		list[0] = indexes
+	end
+	return name and bsearch_index(list, indexes, LANG, name, 1, table.getn(indexes))
+end
+
+local enUS_indexes
+local load_of_transmog = LANG == IDX_enUS and load_of_name or function(name, list)
+	if not list then
+		list = itemDB.item
+	end
+	local indexes = enUS_indexes
+	if not indexes then
+		indexes = mkindex(list, IDX_enUS)
+		enUS_indexes = indexes
 	end
 	return name and bsearch_index(list, indexes, IDX_enUS, name, 1, table.getn(indexes))
 end
@@ -109,7 +122,7 @@ local function link_locale(link, mode)
 	local data = load_itemdata(type, sid)
 	if not data and type == "item" then
 		local _, _, name = string.find(link, link_name_rex)
-		data = name and load_of_name(name)
+		data = name and load_of_transmog(name)
 	end
 	if data then
 		link = gsub(link, link_name_rex, "[".. data[idx] .."]")
@@ -120,7 +133,7 @@ end
 local function add_locales(tooltip, type, sid, count, mog)
 	local data = load_itemdata(type, sid)
 	if not data then
-		return 1 -- NOT_FOUND, try load_of_name() to resolve it
+		return 1 -- NOT_FOUND, try load_of_transmog() to resolve it
 	end
 	local show_name = not RDbItemsCfg.NoName
 	if show_name then
@@ -174,8 +187,9 @@ local function HookGameTooltip()
 			return
 		end
 		local _, _, name = string.find(hookFrame.itemLink, link_name_rex)
-		if RDbItemsCfg.mode ~= "cn" then
-			local data = load_of_name(name)
+		local not_cn_mode = RDbItemsCfg.mode ~= "cn" -- the cn_mode translated link name to zhCN
+		if LANG == IDX_zhCN or not_cn_mode then
+			local data = not_cn_mode and load_of_transmog(name) or load_of_name(name)
 			add_locales(GameTooltip, type, data and data[IDX_ID] , hookFrame.itemCount, IDX_zhCN)
 		else
 			GameTooltip:AddLine(name)
