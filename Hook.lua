@@ -26,7 +26,7 @@ local function mkindex(list, column)
 end
 
 local function bsearch(list, column, value, first, last)
-	if not value or first > last then
+	if first > last then
 		return nil
 	end
 	local midd = bit.rshift(first + last, 1)
@@ -42,7 +42,7 @@ local function bsearch(list, column, value, first, last)
 end
 
 local function bsearch_index(list, indexes, column, value, first, last)
-	if not value or first > last then
+	if first > last then
 		return nil
 	end
 	local midd = bit.rshift(first + last, 1)
@@ -77,7 +77,7 @@ function load_of_name(name, list)
 		indexes = mkindex(list, LANG)
 		list[0] = indexes
 	end
-	return bsearch_index(list, indexes, LANG, name, 1, table.getn(indexes))
+	return name and bsearch_index(list, indexes, LANG, name, 1, table.getn(indexes))
 end
 
 -- regexp
@@ -85,8 +85,9 @@ local link_name_rex = "%[([^%]]+)%]"
 local link_type_id_rex = "|H(%l+):(%d+)"
 
 local function load_itemdata(type, sid)
+	local id = tonumber(sid)
 	local list = itemDB[type]
-	return list and bsearch(list, 1, tonumber(sid), 1, table.getn(list))
+	return list and id and bsearch(list, 1, id, 1, table.getn(list))
 end
 
 itemDB.get = load_itemdata
