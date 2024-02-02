@@ -1,7 +1,7 @@
 -- global
 if RDbItems then return end
 
-local itemDB = { version = 20300 } -- 2.3.0
+local itemDB = { version = 20301 } -- 2.3.1
 RDbItems = itemDB
 
 function itemDB.trace(...)
@@ -26,34 +26,32 @@ local function mkindex(list, column)
 end
 
 local function bsearch(list, column, value, first, last)
-	if first > last then
-		return nil
-	end
-	local midd = bit.rshift(first + last, 1)
-	local data = list[midd]
-	local mono = data[column]
-	if mono == value then
-		return data
-	elseif mono < value then
-		return bsearch(list, column, value, midd + 1, last)
-	else
-		return bsearch(list, column, value, first, midd - 1)
+	while first <= last do
+		local midd = bit.rshift(first + last, 1)
+		local data = list[midd]
+		local mono = data[column]
+		if mono == value then
+			return data
+		elseif mono < value then
+			first = midd + 1
+		else
+			last = midd - 1
+		end
 	end
 end
 
 local function bsearch_index(list, indexes, column, value, first, last)
-	if first > last then
-		return nil
-	end
-	local midd = bit.rshift(first + last, 1)
-	local data = list[indexes[midd]]
-	local mono = data[column]
-	if mono == value then
-		return data
-	elseif mono < value then
-		return bsearch_index(list, indexes, column, value, midd + 1, last)
-	else
-		return bsearch_index(list, indexes, column, value, first, midd - 1)
+	while first <= last do
+		local midd = bit.rshift(first + last, 1)
+		local data = list[indexes[midd]]
+		local mono = data[column]
+		if mono == value then
+			return data
+		elseif mono < value then
+			first = midd + 1
+		else
+			last = midd - 1
+		end
 	end
 end
 
