@@ -2,5 +2,5 @@
 ## Title: |cFF7A43B6RDbItems|r(中英文物品名显示)
 ## SavedVariables: RDbItemsCfg
 ## OptionalDeps: pfQuest, pfUI
-## Version 2.2.X
+## Version 2.3.1
 RDbItems.xml
