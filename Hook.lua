@@ -117,26 +117,37 @@ local function add_locales(tooltip, type, sid, count)
 	if not data then
 		return
 	end
-	if type ~= "item" then
+	local show_name = not RDbItemsCfg.NoName
+	if show_name then
 		tooltip:AddLine(data[OPLANG])
 		tooltip:Show()
+	end
+	if type ~= "item" then
 		return
 	end
-	local lv = data[IDX_LV]
-	if not RDbItemsCfg.NoName then
-		tooltip:AddLine(data[OPLANG])
-	end
+
 	if not count then count = 1 end
 	if not RDbItemsCfg.NoPrice and count > 0 and data[IDX_PRICE] > 0 then
 		SetTooltipMoney(tooltip, data[IDX_PRICE] * count)
 	end
+
+	local lv = data[IDX_LV]
 	local right = getglobal(tooltip:GetName().."TextRight".. tooltip:NumLines())
 	if not RDbItemsCfg.NoPrice and lv > 1 and right and not right:IsVisible() then
-		right:SetText("|cffddddddLv|r".. lv)
-		right:Show()
+		local strlv = "|cffddddddLv|r".. lv
 		local moneyFrame = getglobal(tooltip:GetName().."MoneyFrame")
-		if moneyFrame and moneyFrame:IsVisible() then
-			tooltip:SetMinimumWidth(moneyFrame:GetWidth() + right:GetWidth() + 12)
+		local money_visible = moneyFrame and moneyFrame:IsVisible()
+		if money_visible or show_name then
+			right:SetText(strlv)
+			right:Show()
+			if money_visible then
+				local min_width = moneyFrame:GetWidth() + right:GetWidth() + 12
+				if tooltip:GetWidth() < min_width then
+					tooltip:SetMinimumWidth(min_width)
+				end
+			end
+		else
+			tooltip:AddLine(strlv)
 		end
 	end
 	tooltip:Show()
@@ -460,7 +471,9 @@ function itemDB.Init(rbtn)
 	end
 	rbtn:RegisterEvent("VARIABLES_LOADED")
 	rbtn:SetScript("OnEvent", function()
-		if not RDbItemsCfg then RDbItemsCfg = {} end
+		if not RDbItemsCfg then
+			RDbItemsCfg = LANG == IDX_zhCN and { NoName = 1 } or {}
+		end
 		if not RDbItemsCfg.NoCheapest then
 			rbtn:SetScript("OnUpdate", Cheapest.OnUpdate)
 		end
