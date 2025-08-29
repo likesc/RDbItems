@@ -136,7 +136,7 @@ local function add_locales(tooltip, type, sid, count, mog)
 		return 1 -- NOT_FOUND, try load_of_transmog() to resolve it
 	end
 	local show_name = not RDbItemsCfg.NoName
-	if show_name then
+	if show_name or mog then
 		tooltip:AddLine(data[mog or OPLANG])
 		tooltip:Show()
 	end
